@@ -7,12 +7,12 @@ import { getFirestore } from "firebase/firestore";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-auth-domain",
-  projectId: "your-project-id",
-  storageBucket: "your-storage-bucket",
-  messagingSenderId: "your-messaging-sender-id",
-  appId: "your-app-id"
+  "projectId": "esano-ai-genealogy-explorer",
+  "appId": "1:955274882186:web:1c97929adafc3f7c2d5173",
+  "storageBucket": "esano-ai-genealogy-explorer.firebasestorage.app",
+  "apiKey": "AIzaSyBkfXSjTEvHUq0U01sayIwS36ALVx-dKuY",
+  "authDomain": "esano-ai-genealogy-explorer.firebaseapp.com",
+  "messagingSenderId": "955274882186"
 };
 
 // Initialize Firebase
