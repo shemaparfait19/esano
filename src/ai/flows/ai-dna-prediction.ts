@@ -63,7 +63,7 @@ const analyzeDnaAndPredictRelativesPrompt = ai.definePrompt({
   name: 'analyzeDnaAndPredictRelativesPrompt',
   input: {schema: AnalyzeDnaAndPredictRelativesInputSchema},
   output: {schema: AnalyzeDnaAndPredictRelativesOutputSchema},
-  model: 'googleai/gemini-2.5-flash',
+  model: 'gemini-2.5-flash',
   prompt: `You are an expert in genetic analysis and genealogy. Given a user's DNA data and the DNA data of other users, identify potential relatives, estimate the relationship probabilities, and identify possible common ancestors.
 
 User DNA Data: {{{dnaData}}}
