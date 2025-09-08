@@ -1,14 +1,15 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
+import {configure} from 'genkit';
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable not set');
-}
-
-export const ai = genkit({
+configure({
   plugins: [
     googleAI({
       apiKey: process.env.GEMINI_API_KEY,
     }),
   ],
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
 });
+
+export const ai = genkit();
