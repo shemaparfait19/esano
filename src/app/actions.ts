@@ -31,7 +31,7 @@ export async function analyzeDna(dnaData: string) {
 
 export async function getAssistantResponse(query: string) {
     try {
-        const response = await askGenealogyAssistant(query);
+        const response = await askGenealogyAssistant({ query });
         return response;
     } catch (error) {
         console.error("AI Assistant failed:", error);

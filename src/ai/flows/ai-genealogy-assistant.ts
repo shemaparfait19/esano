@@ -14,15 +14,17 @@ export type GenealogyAssistantInput = z.infer<typeof GenealogyAssistantInputSche
 const GenealogyAssistantOutputSchema = z.string().describe('The AI assistant\'s response to the user query.');
 export type GenealogyAssistantOutput = z.infer<typeof GenealogyAssistantOutputSchema>;
 
-export async function askGenealogyAssistant(query: string): Promise<GenealogyAssistantOutput> {
-  return genealogyAssistantFlow({ query });
+export async function askGenealogyAssistant(
+  input: GenealogyAssistantInput
+): Promise<GenealogyAssistantOutput> {
+  return genealogyAssistantFlow(input);
 }
 
 const genealogyAssistantPrompt = ai.definePrompt({
   name: 'genealogyAssistantPrompt',
   input: {schema: GenealogyAssistantInputSchema},
   output: {schema: GenealogyAssistantOutputSchema},
-  model: googleAI.model('gemini-2.5-flash'),
+  model: 'gemini-2.5-flash',
   prompt: `You are a helpful AI assistant specialized in genealogy and DNA analysis.
 
   Your goal is to answer the user's questions accurately and provide guidance on using the application.
