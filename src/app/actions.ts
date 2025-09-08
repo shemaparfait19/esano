@@ -4,6 +4,9 @@ import { analyzeDnaAndPredictRelatives } from '@/ai/flows/ai-dna-prediction';
 import { analyzeAncestry } from '@/ai/flows/ai-ancestry-estimation';
 import { getGenerationalInsights } from '@/ai/flows/ai-generational-insights';
 import { askGenealogyAssistant } from '@/ai/flows/ai-genealogy-assistant';
+import type { AnalyzeDnaAndPredictRelativesInput } from '@/ai/schemas/ai-dna-prediction';
+import type { AncestryEstimationInput } from '@/ai/schemas/ai-ancestry-estimation';
+import type { GenerationalInsightsInput } from '@/ai/schemas/ai-generational-insights';
 
 // This is a mock database of other users' DNA to match against.
 // In a real application, this would come from a database query.
@@ -15,10 +18,14 @@ const OTHER_USERS_DNA = [
 
 export async function analyzeDna(dnaData: string) {
     try {
+        const dnaInput: AnalyzeDnaAndPredictRelativesInput = { dnaData, otherUsersDnaData: OTHER_USERS_DNA, userFamilyTreeData: 'None' };
+        const ancestryInput: AncestryEstimationInput = { snpData: dnaData };
+        const insightsInput: GenerationalInsightsInput = { geneticMarkers: dnaData };
+        
         const [relatives, ancestry, insights] = await Promise.all([
-            analyzeDnaAndPredictRelatives({ dnaData, otherUsersDnaData: OTHER_USERS_DNA, userFamilyTreeData: 'None' }),
-            analyzeAncestry({ snpData: dnaData }),
-            getGenerationalInsights({ geneticMarkers: dnaData })
+            analyzeDnaAndPredictRelatives(dnaInput),
+            analyzeAncestry(ancestryInput),
+            getGenerationalInsights(insightsInput)
         ]);
 
         return { relatives, ancestry, insights };
