@@ -21,9 +21,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const { setAnalysisCompleted, setRelatives, setAncestry, setInsights } = useAppContext();
-
-
+  
+  // We cannot use useAppContext here as AppProvider is a child of AuthProvider.
+  // We will instead manage the app state via the user profile check.
+  // The AppProvider will then consume this state.
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
@@ -34,35 +36,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userDoc.exists()) {
           const profile = userDoc.data() as UserProfile;
           setUserProfile(profile);
-          if (profile.analysis) {
-            setAnalysisCompleted(true);
-            setRelatives(profile.analysis.relatives);
-            setAncestry(profile.analysis.ancestry);
-            setInsights(profile.analysis.insights);
-          } else {
-             setAnalysisCompleted(false);
-          }
         } else {
+            // This case can happen if a user is created in Auth but their Firestore doc fails.
             setUserProfile(null);
-            setAnalysisCompleted(false);
         }
       } else {
         setUser(null);
         setUserProfile(null);
-        setAnalysisCompleted(false);
-        setRelatives(null);
-        setAncestry(null);
-        setInsights(null);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [setAnalysisCompleted, setRelatives, setAncestry, setInsights]);
+  }, []);
 
   const signOut = async () => {
     await firebaseSignOut(auth);
-    // State will be cleared by the onAuthStateChanged listener
+    setUser(null);
+    setUserProfile(null);
   };
 
   const value = { user, userProfile, loading, signOut };
