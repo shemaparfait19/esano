@@ -11,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 const AnalyzeDnaAndPredictRelativesInputSchema = z.object({
   dnaData: z.string().describe('The user DNA data in a standardized format.'),
@@ -63,7 +64,7 @@ const analyzeDnaAndPredictRelativesPrompt = ai.definePrompt({
   name: 'analyzeDnaAndPredictRelativesPrompt',
   input: {schema: AnalyzeDnaAndPredictRelativesInputSchema},
   output: {schema: AnalyzeDnaAndPredictRelativesOutputSchema},
-  model: 'gemini-2.5-flash',
+  model: googleAI.model('gemini-2.5-flash'),
   prompt: `You are an expert in genetic analysis and genealogy. Given a user's DNA data and the DNA data of other users, identify potential relatives, estimate the relationship probabilities, and identify possible common ancestors.
 
 User DNA Data: {{{dnaData}}}

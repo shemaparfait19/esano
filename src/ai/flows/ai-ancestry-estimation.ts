@@ -4,6 +4,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 const AncestryEstimationInputSchema = z.object({
   snpData: z
@@ -33,7 +34,7 @@ const ancestryEstimationPrompt = ai.definePrompt({
   name: 'ancestryEstimationPrompt',
   input: {schema: AncestryEstimationInputSchema},
   output: {schema: AncestryEstimationOutputSchema},
-  model: 'gemini-2.5-flash',
+  model: googleAI.model('gemini-2.5-flash'),
   prompt: `Analyze the following SNP data and generate a detailed ancestry report with ethnicity estimates and confidence intervals. Ensure that the ethnicity estimates are as accurate as possible and provide confidence intervals for each estimate.
 
 SNP Data: {{{snpData}}}`,

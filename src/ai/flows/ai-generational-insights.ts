@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {googleAI} from '@genkit-ai/googleai';
 
 const GenerationalInsightsInputSchema = z.object({
   geneticMarkers: z
@@ -49,7 +50,7 @@ const prompt = ai.definePrompt({
   name: 'generationalInsightsPrompt',
   input: {schema: GenerationalInsightsInputSchema},
   output: {schema: GenerationalInsightsOutputSchema},
-  model: 'gemini-2.5-flash',
+  model: googleAI.model('gemini-2.5-flash'),
   prompt: `You are an AI assistant specialized in analyzing genetic data to provide insights into health, traits, and ancestry.
 
   Analyze the provided genetic marker data and generate insights into the following areas:
