@@ -64,7 +64,7 @@ export function DnaUploadForm() {
       try {
         // In a real app, you'd read the file content. For this demo, we'll send a mock string.
         const mockDnaData = `mock_dna_data_from_${file.name}`;
-        const results = await analyzeDna(mockDnaData);
+        const results = await analyzeDna(mockDnaData, file.name);
         
         setRelatives(results.relatives);
         setAncestry(results.ancestry);

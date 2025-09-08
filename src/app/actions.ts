@@ -7,31 +7,57 @@ import { askGenealogyAssistant } from '@/ai/flows/ai-genealogy-assistant';
 import type { AnalyzeDnaAndPredictRelativesInput } from '@/ai/schemas/ai-dna-prediction';
 import type { AncestryEstimationInput } from '@/ai/schemas/ai-ancestry-estimation';
 import type { GenerationalInsightsInput } from '@/ai/schemas/ai-generational-insights';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, doc, setDoc } from 'firebase/firestore';
+import type { UserProfile } from '@/types/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
-// This is a mock database of other users' DNA to match against.
-// In a real application, this would come from a database query.
-const OTHER_USERS_DNA = [
-    'snp_data_user_123_cousin',
-    'snp_data_user_456_sibling',
-    'snp_data_user_789_unrelated',
-];
 
-export async function analyzeDna(dnaData: string) {
+export async function analyzeDna(dnaData: string, fileName: string) {
+    const userId = uuidv4(); // In a real app, this would be the authenticated user's ID
+
     try {
-        const dnaInput: AnalyzeDnaAndPredictRelativesInput = { dnaData, otherUsersDnaData: OTHER_USERS_DNA, userFamilyTreeData: 'None' };
+        // 1. Get other users' DNA data from Firestore
+        const usersCollection = collection(db, 'users');
+        const querySnapshot = await getDocs(usersCollection);
+        const otherUsersDnaData = querySnapshot.docs
+            .map(doc => doc.data() as UserProfile)
+            .filter(user => user.dnaData) // Filter out users without DNA data
+            .map(user => user.dnaData!);
+
+        // 2. Prepare inputs for AI flows
+        const dnaInput: AnalyzeDnaAndPredictRelativesInput = { dnaData, otherUsersDnaData, userFamilyTreeData: 'None' };
         const ancestryInput: AncestryEstimationInput = { snpData: dnaData };
         const insightsInput: GenerationalInsightsInput = { geneticMarkers: dnaData };
         
+        // 3. Run AI analysis in parallel
         const [relatives, ancestry, insights] = await Promise.all([
             analyzeDnaAndPredictRelatives(dnaInput),
             analyzeAncestry(ancestryInput),
             getGenerationalInsights(insightsInput)
         ]);
 
+        // 4. Save new user profile and results to Firestore
+        const userProfile: UserProfile = {
+            userId,
+            dnaData,
+            dnaFileName: fileName,
+            analysis: {
+                relatives,
+                ancestry,
+                insights,
+                completedAt: new Date().toISOString(),
+            }
+        };
+
+        // Use the generated userId as the document ID
+        await setDoc(doc(db, 'users', userId), userProfile);
+
+
         return { relatives, ancestry, insights };
 
     } catch (error) {
-        console.error("AI Analysis failed:", error);
+        console.error("AI Analysis or Firestore operation failed:", error);
         throw new Error("Failed to analyze DNA data. Please try again later.");
     }
 }
