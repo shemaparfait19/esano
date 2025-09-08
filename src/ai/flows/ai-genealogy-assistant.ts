@@ -39,7 +39,7 @@ const genealogyAssistantFlow = ai.defineFlow(
     inputSchema: GenealogyAssistantInputSchema,
     outputSchema: GenealogyAssistantOutputSchema,
   },
-  async input => {
+  async (input) => {
     const {output} = await genealogyAssistantPrompt(input, { model: googleAI.model('gemini-1.5-flash') });
     return output!;
   }
