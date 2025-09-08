@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart,
   Bot,
@@ -9,6 +9,7 @@ import {
   Globe,
   LayoutGrid,
   Users,
+  Loader2,
 } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import {
@@ -22,6 +23,8 @@ import {
   SidebarInset
 } from '@/components/ui/sidebar';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { useAuth } from '@/contexts/auth-context';
+import { useEffect } from 'react';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
@@ -38,6 +41,26 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return null;
+  }
 
   return (
     <SidebarProvider>

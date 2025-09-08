@@ -51,10 +51,10 @@ export default function Home() {
           </div>
           <div className="flex flex-1 items-center justify-end space-x-2">
             <Button variant="ghost" asChild>
-              <Link href="/dashboard">Log In</Link>
+              <Link href="/login">Log In</Link>
             </Button>
             <Button asChild>
-              <Link href="/dashboard">Get Started</Link>
+              <Link href="/signup">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -71,7 +71,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
-                <Link href="/dashboard">Explore Your DNA</Link>
+                <Link href="/signup">Explore Your DNA</Link>
               </Button>
               <Button size="lg" variant="outline">
                 Learn More
@@ -129,7 +129,7 @@ export default function Home() {
             </p>
             <div className="mt-8">
               <Button size="lg" variant="secondary" className="bg-accent text-accent-foreground hover:bg-accent/90" asChild>
-                <Link href="/dashboard">Upload Your DNA</Link>
+                <Link href="/signup">Upload Your DNA</Link>
               </Button>
             </div>
           </div>

@@ -4,14 +4,17 @@ import type { GenerationalInsightsOutput } from "@/ai/schemas/ai-generational-in
 
 export interface UserProfile {
     userId: string;
-    dnaData: string;
-    dnaFileName: string;
+    email?: string;
+    displayName?: string;
+    dnaData?: string;
+    dnaFileName?: string;
     analysis?: {
         relatives: AnalyzeDnaAndPredictRelativesOutput;
         ancestry: AncestryEstimationOutput;
         insights: GenerationalInsightsOutput;
         completedAt: string;
     };
+    familyTree?: any; // Define a proper type for family tree later
     createdAt?: string;
     updatedAt?: string;
 }

@@ -9,12 +9,14 @@ import { useAppContext } from '@/contexts/app-context';
 import { UploadCloud, File, Loader2, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 
 export function DnaUploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
   const { setRelatives, setAncestry, setInsights, setIsAnalyzing, setAnalysisCompleted } = useAppContext();
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -57,6 +59,14 @@ export function DnaUploadForm() {
       });
       return;
     }
+    if (!user) {
+       toast({
+        title: 'Not authenticated',
+        description: 'You must be logged in to analyze DNA.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     startTransition(async () => {
       setIsAnalyzing(true);
@@ -64,7 +74,7 @@ export function DnaUploadForm() {
       try {
         // In a real app, you'd read the file content. For this demo, we'll send a mock string.
         const mockDnaData = `mock_dna_data_from_${file.name}`;
-        const results = await analyzeDna(mockDnaData, file.name);
+        const results = await analyzeDna(user.uid, mockDnaData, file.name);
         
         setRelatives(results.relatives);
         setAncestry(results.ancestry);
@@ -144,7 +154,7 @@ export function DnaUploadForm() {
 
       <Button
         onClick={handleSubmit}
-        disabled={!file || isPending}
+        disabled={!file || isPending || !user}
         className="w-full sm:w-auto"
         size="lg"
       >
