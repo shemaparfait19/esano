@@ -11,13 +11,12 @@ const firebaseConfig = {
   projectId: "esano-ai-genealogy-explorer",
   storageBucket: "esano-ai-genealogy-explorer.appspot.com",
   messagingSenderId: "955274882186",
-  appId: "1:955274882186:web:1c97929adafc3f7c2d5173",
-  measurementId: "G-XXXXXXXXXX"
+  appId: "1:955274882186:web:1c97929adafc3f7c2d5173"
 };
 
 
 // Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
