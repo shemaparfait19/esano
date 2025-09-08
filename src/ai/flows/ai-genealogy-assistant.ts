@@ -5,19 +5,21 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const GenealogyAssistantInputSchema = z.string().describe('The user query about genealogy or DNA analysis.');
+const GenealogyAssistantInputSchema = z.object({
+  query: z.string().describe('The user query about genealogy or DNA analysis.'),
+});
 export type GenealogyAssistantInput = z.infer<typeof GenealogyAssistantInputSchema>;
 
 const GenealogyAssistantOutputSchema = z.string().describe('The AI assistant\'s response to the user query.');
 export type GenealogyAssistantOutput = z.infer<typeof GenealogyAssistantOutputSchema>;
 
-export async function askGenealogyAssistant(input: GenealogyAssistantInput): Promise<GenealogyAssistantOutput> {
-  return genealogyAssistantFlow(input);
+export async function askGenealogyAssistant(query: string): Promise<GenealogyAssistantOutput> {
+  return genealogyAssistantFlow({ query });
 }
 
 const genealogyAssistantPrompt = ai.definePrompt({
   name: 'genealogyAssistantPrompt',
-  input: {schema: z.object({ query: GenealogyAssistantInputSchema })},
+  input: {schema: GenealogyAssistantInputSchema},
   output: {schema: GenealogyAssistantOutputSchema},
   prompt: `You are a helpful AI assistant specialized in genealogy and DNA analysis.
 
@@ -34,8 +36,8 @@ const genealogyAssistantFlow = ai.defineFlow(
     inputSchema: GenealogyAssistantInputSchema,
     outputSchema: GenealogyAssistantOutputSchema,
   },
-  async query => {
-    const {output} = await genealogyAssistantPrompt({query});
+  async input => {
+    const {output} = await genealogyAssistantPrompt(input);
     return output!;
   }
 );
