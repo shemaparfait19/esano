@@ -24,7 +24,6 @@ const genealogyAssistantPrompt = ai.definePrompt({
   name: 'genealogyAssistantPrompt',
   input: {schema: GenealogyAssistantInputSchema},
   output: {schema: GenealogyAssistantOutputSchema},
-  model: 'gemini-2.5-flash',
   prompt: `You are a helpful AI assistant specialized in genealogy and DNA analysis.
 
   Your goal is to answer the user's questions accurately and provide guidance on using the application.
@@ -41,7 +40,7 @@ const genealogyAssistantFlow = ai.defineFlow(
     outputSchema: GenealogyAssistantOutputSchema,
   },
   async input => {
-    const {output} = await genealogyAssistantPrompt(input);
+    const {output} = await genealogyAssistantPrompt(input, { model: googleAI.model('gemini-2.5-flash') });
     return output!;
   }
 );
