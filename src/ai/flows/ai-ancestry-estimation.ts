@@ -1,12 +1,18 @@
-// This is a Genkit flow that leverages AI to analyze user SNP data and generate a detailed ancestry report with ethnicity estimates and confidence intervals.
-
 'use server';
+/**
+ * @fileOverview This file defines a Genkit flow for AI-powered ancestry estimation.
+ *
+ * It includes:
+ * - analyzeAncestry: An async function to initiate ancestry analysis.
+ * - AncestryEstimationInput: The input type for the analyzeAncestry function.
+ * - AncestryEstimationOutput: The output type for the analyzeAncestry function.
+ */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
-const AncestryEstimationInputSchema = z.object({
+export const AncestryEstimationInputSchema = z.object({
   snpData: z
     .string()
     .describe(
@@ -15,7 +21,7 @@ const AncestryEstimationInputSchema = z.object({
 });
 export type AncestryEstimationInput = z.infer<typeof AncestryEstimationInputSchema>;
 
-const AncestryEstimationOutputSchema = z.object({
+export const AncestryEstimationOutputSchema = z.object({
   ethnicityEstimates: z
     .string()
     .describe(

@@ -13,7 +13,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
-const AnalyzeDnaAndPredictRelativesInputSchema = z.object({
+export const AnalyzeDnaAndPredictRelativesInputSchema = z.object({
   dnaData: z.string().describe('The user DNA data in a standardized format.'),
   otherUsersDnaData: z
     .array(z.string())
@@ -46,7 +46,7 @@ const PredictedRelativeSchema = z.object({
     .describe('The amount of shared DNA in centimorgans.'),
 });
 
-const AnalyzeDnaAndPredictRelativesOutputSchema = z.array(
+export const AnalyzeDnaAndPredictRelativesOutputSchema = z.array(
   PredictedRelativeSchema
 );
 

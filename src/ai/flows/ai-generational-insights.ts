@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
 
-const GenerationalInsightsInputSchema = z.object({
+export const GenerationalInsightsInputSchema = z.object({
   geneticMarkers: z
     .string()
     .describe(
@@ -21,7 +21,7 @@ const GenerationalInsightsInputSchema = z.object({
 });
 export type GenerationalInsightsInput = z.infer<typeof GenerationalInsightsInputSchema>;
 
-const GenerationalInsightsOutputSchema = z.object({
+export const GenerationalInsightsOutputSchema = z.object({
   healthInsights: z
     .string()
     .describe(
