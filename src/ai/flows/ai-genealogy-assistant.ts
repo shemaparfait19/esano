@@ -17,7 +17,7 @@ export async function askGenealogyAssistant(input: GenealogyAssistantInput): Pro
 
 const genealogyAssistantPrompt = ai.definePrompt({
   name: 'genealogyAssistantPrompt',
-  input: {schema: GenealogyAssistantInputSchema},
+  input: {schema: z.object({ query: GenealogyAssistantInputSchema })},
   output: {schema: GenealogyAssistantOutputSchema},
   prompt: `You are a helpful AI assistant specialized in genealogy and DNA analysis.
 
@@ -25,7 +25,7 @@ const genealogyAssistantPrompt = ai.definePrompt({
   You can also offer proactive suggestions related to genealogy and DNA analysis.
 
   Here's the user's question:
-  {{query}}`,
+  {{{query}}}`,
 });
 
 const genealogyAssistantFlow = ai.defineFlow(
