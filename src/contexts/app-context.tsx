@@ -1,8 +1,8 @@
 'use client';
 
-import type { AnalyzeDnaAndPredictRelativesOutput } from '@/ai/flows/ai-dna-prediction';
-import type { AncestryEstimationOutput } from '@/ai/flows/ai-ancestry-estimation';
-import type { GenerationalInsightsOutput } from '@/ai/flows/ai-generational-insights';
+import type { AnalyzeDnaAndPredictRelativesOutput } from '@/ai/schemas/ai-dna-prediction';
+import type { AncestryEstimationOutput } from '@/ai/schemas/ai-ancestry-estimation';
+import type { GenerationalInsightsOutput } from '@/ai/schemas/ai-generational-insights';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 type AppState = {

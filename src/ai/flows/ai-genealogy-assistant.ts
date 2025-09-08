@@ -4,21 +4,16 @@
  *
  * It includes:
  * - `askGenealogyAssistant`: An async function to get a response from the assistant.
- * - `GenealogyAssistantInputSchema`: The Zod schema for the assistant's input.
- * - `GenealogyAssistantOutputSchema`: The Zod schema for the assistant's output.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-
-export const GenealogyAssistantInputSchema = z.object({
-  query: z.string().describe('The user query about genealogy or DNA analysis.'),
-});
-export type GenealogyAssistantInput = z.infer<typeof GenealogyAssistantInputSchema>;
-
-export const GenealogyAssistantOutputSchema = z.string().describe('The AI assistant\'s response to the user query.');
-export type GenealogyAssistantOutput = z.infer<typeof GenealogyAssistantOutputSchema>;
+import {
+  GenealogyAssistantInputSchema,
+  GenealogyAssistantOutputSchema,
+  type GenealogyAssistantInput,
+  type GenealogyAssistantOutput,
+} from '@/ai/schemas/ai-genealogy-assistant';
 
 export async function askGenealogyAssistant(
   input: GenealogyAssistantInput

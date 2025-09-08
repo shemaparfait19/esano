@@ -4,31 +4,16 @@
  *
  * It includes:
  * - analyzeAncestry: An async function to initiate ancestry analysis.
- * - AncestryEstimationInput: The input type for the analyzeAncestry function.
- * - AncestryEstimationOutput: The output type for the analyzeAncestry function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-
-export const AncestryEstimationInputSchema = z.object({
-  snpData: z
-    .string()
-    .describe(
-      'A string representing the user SNP data to be analyzed for ancestry estimation.'
-    ),
-});
-export type AncestryEstimationInput = z.infer<typeof AncestryEstimationInputSchema>;
-
-export const AncestryEstimationOutputSchema = z.object({
-  ethnicityEstimates: z
-    .string()
-    .describe(
-      'A detailed report of ethnicity estimates with confidence intervals.'
-    ),
-});
-export type AncestryEstimationOutput = z.infer<typeof AncestryEstimationOutputSchema>;
+import {
+  AncestryEstimationInputSchema,
+  AncestryEstimationOutputSchema,
+  type AncestryEstimationInput,
+  type AncestryEstimationOutput,
+} from '@/ai/schemas/ai-ancestry-estimation';
 
 export async function analyzeAncestry(
   input: AncestryEstimationInput
