@@ -20,7 +20,7 @@ async function withRetry<T>(fn: () => Promise<T>, tries = 2) {
 
 export async function POST(req: Request) {
   try {
-    const { query, userId } = await req.json();
+    const { query, userId, scope } = await req.json();
     if (!query || typeof query !== "string") {
       return NextResponse.json({ error: "Missing query" }, { status: 400 });
     }
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Gather optional user context (profile + tiny tree) using Admin SDK
+    // Gather optional user context (profile + tiny tree + requests) using Admin SDK
     let userContext = undefined as string | undefined;
     if (userId && typeof userId === "string") {
       try {
@@ -41,7 +41,20 @@ export async function POST(req: Request) {
         ]);
         const profile = profileSnap.exists ? profileSnap.data() : undefined;
         const tree = treeSnap.exists ? treeSnap.data() : undefined;
+
+        let connectionsSummary: any = undefined;
+        if (scope === "connected" || scope === "global") {
+          const reqsSnap = await adminDb.collection("connectionRequests").get();
+          const reqs = reqsSnap.docs
+            .map((d) => ({ id: d.id, ...(d.data() as any) }))
+            .filter((r) => r.fromUserId === userId || r.toUserId === userId);
+          const pending = reqs.filter((r) => r.status === "pending").length;
+          const accepted = reqs.filter((r) => r.status === "accepted").length;
+          connectionsSummary = { pending, accepted };
+        }
+
         const ctx = {
+          scope: scope || "own",
           profile: profile
             ? {
                 fullName: (profile as any).fullName,
@@ -60,6 +73,7 @@ export async function POST(req: Request) {
                   : [],
               }
             : undefined,
+          connections: connectionsSummary,
         };
         userContext = JSON.stringify(ctx);
       } catch {}
