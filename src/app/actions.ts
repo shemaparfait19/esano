@@ -121,30 +121,35 @@ export type SaveProfileInput = {
 };
 
 export async function saveUserProfile(input: SaveProfileInput) {
-  const {
-    userId,
-    fullName,
-    birthDate,
-    birthPlace,
-    clanOrCulturalInfo,
-    relativesNames,
-  } = input;
-  if (!userId || !fullName) {
-    throw new Error("Missing required fields");
+  try {
+    const {
+      userId,
+      fullName,
+      birthDate,
+      birthPlace,
+      clanOrCulturalInfo,
+      relativesNames,
+    } = input;
+    if (!userId || !fullName) {
+      return { ok: false as const, error: "Missing required fields" };
+    }
+    const nowIso = new Date().toISOString();
+    const partial: Partial<UserProfile> = {
+      userId,
+      fullName,
+      birthDate: birthDate || undefined,
+      birthPlace: birthPlace || undefined,
+      clanOrCulturalInfo: clanOrCulturalInfo || undefined,
+      relativesNames: relativesNames?.filter(Boolean) ?? [],
+      profileCompleted: true,
+      updatedAt: nowIso,
+    };
+    await setDoc(fsDoc(db, "users", userId), partial, { merge: true });
+    return { ok: true as const };
+  } catch (e: any) {
+    console.error("saveUserProfile failed", e);
+    return { ok: false as const, error: e?.message ?? "Unknown error" };
   }
-  const nowIso = new Date().toISOString();
-  const partial: Partial<UserProfile> = {
-    userId,
-    fullName,
-    birthDate,
-    birthPlace,
-    clanOrCulturalInfo,
-    relativesNames: relativesNames?.filter(Boolean) ?? [],
-    profileCompleted: true,
-    updatedAt: nowIso,
-  };
-  await setDoc(fsDoc(db, "users", userId), partial, { merge: true });
-  return { ok: true } as const;
 }
 
 export type SuggestedMatch = {

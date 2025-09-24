@@ -68,7 +68,7 @@ export default function ProfileSetupPage() {
       .map((s: string) => s.trim())
       .filter(Boolean);
     try {
-      await saveUserProfile({
+      const res = await saveUserProfile({
         userId: user.uid,
         fullName: values.fullName,
         birthDate: values.birthDate || undefined,
@@ -76,8 +76,19 @@ export default function ProfileSetupPage() {
         clanOrCulturalInfo: values.clanOrCulturalInfo || undefined,
         relativesNames: relatives,
       });
-      toast({ title: "Profile saved", description: "Thanks! Let's continue." });
-      router.replace("/dashboard");
+      if (res?.ok) {
+        toast({
+          title: "Profile saved",
+          description: "Thanks! Let's continue.",
+        });
+        router.replace("/dashboard");
+      } else {
+        toast({
+          title: "Save failed",
+          description: res?.error ?? "Try again",
+          variant: "destructive",
+        });
+      }
     } catch (e: any) {
       toast({
         title: "Save failed",
