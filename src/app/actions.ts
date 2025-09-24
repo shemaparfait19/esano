@@ -52,37 +52,50 @@ export async function analyzeDna(
   fileName: string
 ) {
   try {
-    // Cap extremely long inputs for safety
     const safeDnaData = (dnaData || "").slice(0, 200_000);
 
-    // 1. Get other users' DNA data from Firestore (Admin SDK)
+    // Gather real comparator DNA from other users
     const usersSnapshot = await adminDb.collection("users").get();
     const otherUsersDnaData: string[] = [];
     usersSnapshot.docs.forEach((d) => {
       if (d.id === userId) return;
       const data = d.data() as UserProfile;
-      if (data?.dnaData) otherUsersDnaData.push(data.dnaData);
+      if (
+        data?.dnaData &&
+        typeof data.dnaData === "string" &&
+        data.dnaData.length > 0
+      ) {
+        otherUsersDnaData.push(data.dnaData);
+      }
     });
 
-    // 2. Prepare inputs for AI flows
-    const dnaInput: AnalyzeDnaAndPredictRelativesInput = {
-      dnaData: safeDnaData,
-      otherUsersDnaData: otherUsersDnaData.slice(0, 50),
-      userFamilyTreeData: "None",
-    };
     const ancestryInput: AncestryEstimationInput = { snpData: safeDnaData };
     const insightsInput: GenerationalInsightsInput = {
       geneticMarkers: safeDnaData,
     };
 
-    // 3. Run AI analysis in parallel with retries
-    const [relatives, ancestry, insights] = await Promise.all([
-      withRetry(() => analyzeDnaAndPredictRelatives(dnaInput)),
+    // Always compute ancestry/insights for the user
+    const [ancestry, insights] = await Promise.all([
       withRetry(() => analyzeAncestry(ancestryInput)),
       withRetry(() => getGenerationalInsights(insightsInput)),
     ]);
 
-    // 4. Save results to Firestore (Admin SDK)
+    // Only compute relatives when there is at least one real comparator
+    let relatives: Awaited<ReturnType<typeof analyzeDnaAndPredictRelatives>> =
+      [];
+    if (otherUsersDnaData.length > 0) {
+      const dnaInput: AnalyzeDnaAndPredictRelativesInput = {
+        dnaData: safeDnaData,
+        otherUsersDnaData: otherUsersDnaData.slice(0, 50),
+        userFamilyTreeData: "None",
+      };
+      relatives = await withRetry(() =>
+        analyzeDnaAndPredictRelatives(dnaInput)
+      );
+    } else {
+      relatives = [];
+    }
+
     const userProfile: Partial<UserProfile> = {
       userId,
       dnaData: safeDnaData,
@@ -106,7 +119,6 @@ export async function analyzeDna(
       "AI Analysis or Firestore operation failed:",
       error?.message || error
     );
-    // Return a clear error for client toast
     throw new Error(
       error?.message || "Failed to analyze DNA data. Please try again later."
     );
@@ -161,6 +173,28 @@ export async function saveUserProfile(input: SaveProfileInput) {
   } catch (e: any) {
     console.error("saveUserProfile failed", e);
     return { ok: false as const, error: e?.message ?? "Unknown error" };
+  }
+}
+
+export async function saveUserDna(
+  userId: string,
+  dnaData: string,
+  fileName?: string
+) {
+  try {
+    if (!userId || !dnaData)
+      return { ok: false as const, error: "Missing userId or dnaData" };
+    const safeDna = dnaData.slice(0, 500_000); // cap size
+    const partial: Partial<UserProfile> = {
+      userId,
+      dnaData: safeDna,
+      dnaFileName: fileName || undefined,
+      updatedAt: new Date().toISOString(),
+    };
+    await adminDb.collection("users").doc(userId).set(partial, { merge: true });
+    return { ok: true as const };
+  } catch (e: any) {
+    return { ok: false as const, error: e?.message ?? "Failed to save DNA" };
   }
 }
 
