@@ -8,6 +8,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { saveUserProfile } from "@/app/actions";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import {
   Card,
   CardContent,
@@ -68,27 +70,23 @@ export default function ProfileSetupPage() {
       .map((s: string) => s.trim())
       .filter(Boolean);
     try {
-      const res = await saveUserProfile({
-        userId: user.uid,
-        fullName: values.fullName,
-        birthDate: values.birthDate || undefined,
-        birthPlace: values.birthPlace || undefined,
-        clanOrCulturalInfo: values.clanOrCulturalInfo || undefined,
-        relativesNames: relatives,
-      });
-      if (res?.ok) {
-        toast({
-          title: "Profile saved",
-          description: "Thanks! Let's continue.",
-        });
-        router.replace("/dashboard");
-      } else {
-        toast({
-          title: "Save failed",
-          description: res?.error ?? "Try again",
-          variant: "destructive",
-        });
-      }
+      const nowIso = new Date().toISOString();
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          userId: user.uid,
+          fullName: values.fullName,
+          birthDate: values.birthDate || undefined,
+          birthPlace: values.birthPlace || undefined,
+          clanOrCulturalInfo: values.clanOrCulturalInfo || undefined,
+          relativesNames: relatives,
+          profileCompleted: true,
+          updatedAt: nowIso,
+        },
+        { merge: true }
+      );
+      toast({ title: "Profile saved", description: "Thanks! Let's continue." });
+      router.replace("/dashboard");
     } catch (e: any) {
       toast({
         title: "Save failed",
