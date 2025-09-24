@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { saveUserDna, analyzeDna } from "@/app/actions";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -27,6 +28,11 @@ export default function ProfilePage() {
     relativesNames: "",
   });
   const [loading, setLoading] = useState(true);
+
+  // DNA upload state
+  const [dnaFile, setDnaFile] = useState<File | null>(null);
+  const [dnaSaving, setDnaSaving] = useState(false);
+  const [dnaAnalyzing, setDnaAnalyzing] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -73,6 +79,67 @@ export default function ProfilePage() {
     );
     toast({ title: "Profile updated" });
   };
+
+  async function handleSaveDna() {
+    if (!user || !dnaFile) {
+      toast({
+        title: "No file selected",
+        description: "Choose a DNA file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setDnaSaving(true);
+      const text = await dnaFile.text();
+      const res = await saveUserDna(user.uid, text, dnaFile.name);
+      if (!res.ok) {
+        toast({
+          title: "Save failed",
+          description: res.error ?? "",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "DNA saved", description: `Stored ${dnaFile.name}` });
+      }
+    } catch (e: any) {
+      toast({
+        title: "Save failed",
+        description: e?.message ?? "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setDnaSaving(false);
+    }
+  }
+
+  async function handleAnalyzeDna() {
+    if (!user || !dnaFile) {
+      toast({
+        title: "No file selected",
+        description: "Choose a DNA file first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setDnaAnalyzing(true);
+      const text = await dnaFile.text();
+      await analyzeDna(user.uid, text, dnaFile.name);
+      toast({
+        title: "Analysis Complete",
+        description: "Open Relatives/Ancestry/Insights to view results.",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Analysis failed",
+        description: e?.message ?? "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setDnaAnalyzing(false);
+    }
+  }
 
   if (loading) return null;
 
@@ -146,6 +213,41 @@ export default function ProfilePage() {
           </div>
           <div className="md:col-span-2">
             <Button onClick={onSave}>Save Changes</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl text-primary">
+            DNA Data
+          </CardTitle>
+          <CardDescription>
+            Upload and save your raw DNA text file. You can analyze immediately
+            or later.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <Input
+            type="file"
+            onChange={(e) => setDnaFile(e.target.files?.[0] ?? null)}
+          />
+          {dnaFile && (
+            <div className="text-sm text-muted-foreground">
+              Selected: {dnaFile.name} ({Math.round(dnaFile.size / 1024)} KB)
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button onClick={handleSaveDna} disabled={!dnaFile || dnaSaving}>
+              {dnaSaving ? "Saving..." : "Save DNA"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleAnalyzeDna}
+              disabled={!dnaFile || dnaAnalyzing}
+            >
+              {dnaAnalyzing ? "Analyzing..." : "Analyze Now"}
+            </Button>
           </div>
         </CardContent>
       </Card>
