@@ -54,7 +54,9 @@ export default function DashboardPage() {
     let ignore = false;
     async function load() {
       if (!user) return;
-      const s = await getSuggestedMatches(user.uid);
+      const res = await fetch(`/api/suggestions?userId=${user.uid}`);
+      const data = await res.json();
+      const s = data?.suggestions ?? [];
       if (!ignore) setSuggestions(s);
     }
     load();
@@ -67,8 +69,8 @@ export default function DashboardPage() {
     let ignore = false;
     async function loadCounts() {
       if (!user) return;
-      const mod = await import("@/app/actions");
-      const data = await mod.getMyConnectionRequests(user.uid);
+      const res = await fetch(`/api/requests?userId=${user.uid}`);
+      const data = await res.json();
       if (!ignore) setIncomingCount(data.incoming.length);
     }
     loadCounts();

@@ -2,11 +2,7 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useMemo, useState } from "react";
-import {
-  addFamilyMember,
-  getFamilyTree,
-  linkFamilyRelation,
-} from "@/app/actions";
+// import { addFamilyMember, getFamilyTree, linkFamilyRelation } from "@/app/actions";
 import type {
   FamilyTree,
   FamilyTreeMember,
@@ -37,7 +33,9 @@ export default function FamilyTreePage() {
     let ignore = false;
     async function load() {
       if (!user) return;
-      const t = await getFamilyTree(user.uid);
+      const res = await fetch(`/api/family-tree?userId=${user.uid}`);
+      const { tree } = await res.json();
+      const t = tree;
       if (!ignore) setTree(t);
     }
     load();
@@ -55,7 +53,13 @@ export default function FamilyTreePage() {
       fullName: newName.trim(),
       birthPlace: newBirthPlace || undefined,
     };
-    const updated = await addFamilyMember(user.uid, member);
+    const res = await fetch("/api/family-tree", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "member", ownerUserId: user.uid, member }),
+    });
+    const { tree } = await res.json();
+    const updated = tree;
     setTree(updated);
     setNewName("");
     setNewBirthPlace("");
@@ -64,7 +68,13 @@ export default function FamilyTreePage() {
   async function addRelation() {
     if (!user || !fromId || !toId || fromId === toId) return;
     const edge: FamilyTreeEdge = { fromId, toId, relation: relation as any };
-    const updated = await linkFamilyRelation(user.uid, edge);
+    const res = await fetch("/api/family-tree", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "edge", ownerUserId: user.uid, edge }),
+    });
+    const { tree } = await res.json();
+    const updated = tree;
     setTree(updated);
   }
 

@@ -2,10 +2,7 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState } from "react";
-import {
-  getMyConnectionRequests,
-  respondToConnectionRequest,
-} from "@/app/actions";
+// import { getMyConnectionRequests, respondToConnectionRequest } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -18,7 +15,8 @@ export default function NotificationsPage() {
     let ignore = false;
     async function load() {
       if (!user) return;
-      const { incoming, outgoing } = await getMyConnectionRequests(user.uid);
+      const res = await fetch(`/api/requests?userId=${user.uid}`);
+      const { incoming, outgoing } = await res.json();
       if (!ignore) {
         setIncoming(incoming);
         setOutgoing(outgoing);
@@ -31,9 +29,14 @@ export default function NotificationsPage() {
   }, [user]);
 
   const act = async (id: string, status: "accepted" | "declined") => {
-    await respondToConnectionRequest(id, status);
+    await fetch("/api/requests", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status }),
+    });
     if (!user) return;
-    const data = await getMyConnectionRequests(user.uid);
+    const res = await fetch(`/api/requests?userId=${user.uid}`);
+    const data = await res.json();
     setIncoming(data.incoming);
     setOutgoing(data.outgoing);
   };
