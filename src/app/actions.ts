@@ -15,6 +15,7 @@ import {
   getDocs,
   setDoc,
 } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import type {
   UserProfile,
   ConnectionRequest,
@@ -144,7 +145,7 @@ export async function saveUserProfile(input: SaveProfileInput) {
       profileCompleted: true,
       updatedAt: nowIso,
     };
-    await setDoc(fsDoc(db, "users", userId), partial, { merge: true });
+    await adminDb.collection("users").doc(userId).set(partial, { merge: true });
     return { ok: true as const };
   } catch (e: any) {
     console.error("saveUserProfile failed", e);
@@ -163,10 +164,10 @@ export async function getSuggestedMatches(
   currentUserId: string
 ): Promise<SuggestedMatch[]> {
   // Simple heuristic suggestions based on profile overlap (non-DNA)
-  const currentDoc = await getDoc(fsDoc(db, "users", currentUserId));
-  if (!currentDoc.exists()) return [];
+  const currentDoc = await adminDb.collection("users").doc(currentUserId).get();
+  if (!currentDoc.exists) return [];
   const me = currentDoc.data() as UserProfile;
-  const usersSnapshot = await getDocs(collection(db, "users"));
+  const usersSnapshot = await adminDb.collection("users").get();
 
   const suggestions: SuggestedMatch[] = [];
   for (const d of usersSnapshot.docs) {
@@ -246,7 +247,10 @@ export async function sendConnectionRequest(
     status: "pending",
     createdAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "connectionRequests", id), req, { merge: true });
+  await adminDb
+    .collection("connectionRequests")
+    .doc(id)
+    .set(req, { merge: true });
   return { ok: true } as const;
 }
 
@@ -257,34 +261,33 @@ export async function respondToConnectionRequest(
   if (!["accepted", "declined"].includes(status)) {
     throw new Error("Invalid status");
   }
-  await setDoc(
-    fsDoc(db, "connectionRequests", id),
-    { status, respondedAt: new Date().toISOString() },
-    { merge: true }
-  );
+  await adminDb
+    .collection("connectionRequests")
+    .doc(id)
+    .set({ status, respondedAt: new Date().toISOString() }, { merge: true });
   return { ok: true } as const;
 }
 
 export async function getMyConnectionRequests(userId: string) {
-  const snap = await getDocs(collection(db, "connectionRequests"));
-  const all = snap.docs.map((d) => ({
+  const snap = await adminDb.collection("connectionRequests").get();
+  const all = snap.docs.map((d: any) => ({
     id: d.id,
     ...(d.data() as ConnectionRequest),
   }));
   const incoming = all.filter(
-    (r) => r.toUserId === userId && r.status === "pending"
+    (r: ConnectionRequest) => r.toUserId === userId && r.status === "pending"
   );
   const outgoing = all.filter(
-    (r) => r.fromUserId === userId && r.status === "pending"
+    (r: ConnectionRequest) => r.fromUserId === userId && r.status === "pending"
   );
   return { incoming, outgoing };
 }
 
 // Family Tree actions
 export async function getFamilyTree(ownerUserId: string): Promise<FamilyTree> {
-  const ref = fsDoc(db, "familyTrees", ownerUserId);
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
+  const ref = adminDb.collection("familyTrees").doc(ownerUserId);
+  const snap = await ref.get();
+  if (snap.exists) {
     return snap.data() as FamilyTree;
   }
   const empty: FamilyTree = {
@@ -293,7 +296,7 @@ export async function getFamilyTree(ownerUserId: string): Promise<FamilyTree> {
     edges: [],
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(ref, empty, { merge: true });
+  await ref.set(empty, { merge: true });
   return empty;
 }
 
@@ -307,7 +310,10 @@ export async function addFamilyMember(
     members: [...tree.members.filter((m) => m.id !== member.id), member],
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  await adminDb
+    .collection("familyTrees")
+    .doc(ownerUserId)
+    .set(updated, { merge: true });
   return updated;
 }
 
@@ -329,6 +335,9 @@ export async function linkFamilyRelation(
     edges: [...withoutDup, edge],
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  await adminDb
+    .collection("familyTrees")
+    .doc(ownerUserId)
+    .set(updated, { merge: true });
   return updated;
 }
