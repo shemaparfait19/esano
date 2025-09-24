@@ -64,6 +64,22 @@ const RELATIONS: (
   "other",
 ];
 
+// Remove undefined values recursively to satisfy Firestore constraints
+function sanitize<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitize(v)) as any;
+  }
+  if (value && typeof value === "object") {
+    const out: any = {};
+    Object.entries(value as any).forEach(([k, v]) => {
+      if (v === undefined) return;
+      out[k] = sanitize(v as any);
+    });
+    return out;
+  }
+  return value;
+}
+
 export default function FamilyTreePage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -127,7 +143,7 @@ export default function FamilyTreePage() {
           edges: [],
           updatedAt: new Date().toISOString(),
         };
-        await setDoc(ref, init, { merge: true });
+        await setDoc(ref, sanitize(init), { merge: true });
         setTree(init);
         setLastSaved(init.updatedAt);
       }
@@ -165,11 +181,8 @@ export default function FamilyTreePage() {
     if (!user) return;
     try {
       const updatedAt = new Date().toISOString();
-      await setDoc(
-        doc(db, "familyTrees", user.uid),
-        { ...next, updatedAt },
-        { merge: true }
-      );
+      const payload = sanitize({ ...next, updatedAt });
+      await setDoc(doc(db, "familyTrees", user.uid), payload, { merge: true });
       setLastSaved(updatedAt);
       if (showToast)
         toast({ title: "Saved", description: "Family tree updated." });
