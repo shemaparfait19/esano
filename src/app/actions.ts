@@ -52,53 +52,64 @@ export async function analyzeDna(
   fileName: string
 ) {
   try {
-    // 1. Get other users' DNA data from Firestore
-    const usersCollection = collection(db, "users");
-    const querySnapshot = await getDocs(usersCollection);
-    const otherUsersDnaData = querySnapshot.docs
-      .map((d) => ({ id: d.id, data: d.data() as UserProfile }))
-      .filter(({ id, data }) => id !== userId && !!data.dnaData)
-      .map(({ data }) => data.dnaData!)
-      .slice(0, 50); // cap to reasonable size for prompt safety
+    // Cap extremely long inputs for safety
+    const safeDnaData = (dnaData || "").slice(0, 200_000);
+
+    // 1. Get other users' DNA data from Firestore (Admin SDK)
+    const usersSnapshot = await adminDb.collection("users").get();
+    const otherUsersDnaData: string[] = [];
+    usersSnapshot.docs.forEach((d) => {
+      if (d.id === userId) return;
+      const data = d.data() as UserProfile;
+      if (data?.dnaData) otherUsersDnaData.push(data.dnaData);
+    });
 
     // 2. Prepare inputs for AI flows
     const dnaInput: AnalyzeDnaAndPredictRelativesInput = {
-      dnaData,
-      otherUsersDnaData,
+      dnaData: safeDnaData,
+      otherUsersDnaData: otherUsersDnaData.slice(0, 50),
       userFamilyTreeData: "None",
     };
-    const ancestryInput: AncestryEstimationInput = { snpData: dnaData };
+    const ancestryInput: AncestryEstimationInput = { snpData: safeDnaData };
     const insightsInput: GenerationalInsightsInput = {
-      geneticMarkers: dnaData,
+      geneticMarkers: safeDnaData,
     };
 
-    // 3. Run AI analysis in parallel
+    // 3. Run AI analysis in parallel with retries
     const [relatives, ancestry, insights] = await Promise.all([
       withRetry(() => analyzeDnaAndPredictRelatives(dnaInput)),
       withRetry(() => analyzeAncestry(ancestryInput)),
       withRetry(() => getGenerationalInsights(insightsInput)),
     ]);
 
-    // 4. Save new user profile and results to Firestore
-    const userProfile: UserProfile = {
+    // 4. Save results to Firestore (Admin SDK)
+    const userProfile: Partial<UserProfile> = {
       userId,
-      dnaData,
+      dnaData: safeDnaData,
       dnaFileName: fileName,
       analysis: {
         relatives,
         ancestry,
         insights,
         completedAt: new Date().toISOString(),
-      },
+      } as any,
+      updatedAt: new Date().toISOString(),
     };
-
-    // Use the authenticated userId as the document ID
-    await setDoc(fsDoc(db, "users", userId), userProfile, { merge: true });
+    await adminDb
+      .collection("users")
+      .doc(userId)
+      .set(userProfile, { merge: true });
 
     return { relatives, ancestry, insights };
-  } catch (error) {
-    console.error("AI Analysis or Firestore operation failed:", error);
-    throw new Error("Failed to analyze DNA data. Please try again later.");
+  } catch (error: any) {
+    console.error(
+      "AI Analysis or Firestore operation failed:",
+      error?.message || error
+    );
+    // Return a clear error for client toast
+    throw new Error(
+      error?.message || "Failed to analyze DNA data. Please try again later."
+    );
   }
 }
 
@@ -178,7 +189,6 @@ export async function getSuggestedMatches(
     let score = 0;
     const reasons: string[] = [];
 
-    // Name overlap (very naive)
     const myNames = (me.relativesNames ?? []).map((n) => n.toLowerCase());
     const otherNames = (other.relativesNames ?? []).map((n) => n.toLowerCase());
     const sharedNames = myNames.filter((n) => otherNames.includes(n));
@@ -187,7 +197,6 @@ export async function getSuggestedMatches(
       reasons.push(`Shared relatives: ${sharedNames.slice(0, 3).join(", ")}`);
     }
 
-    // Birth place match
     if (
       me.birthPlace &&
       other.birthPlace &&
@@ -197,7 +206,6 @@ export async function getSuggestedMatches(
       reasons.push("Same birth place");
     }
 
-    // Clan / cultural info match
     if (
       me.clanOrCulturalInfo &&
       other.clanOrCulturalInfo &&
@@ -208,7 +216,6 @@ export async function getSuggestedMatches(
       reasons.push("Matching clan/cultural info");
     }
 
-    // Full name fuzzy contains
     if (me.fullName && other.fullName) {
       const a = me.fullName.toLowerCase();
       const b = other.fullName.toLowerCase();
@@ -285,9 +292,9 @@ export async function getMyConnectionRequests(userId: string) {
 
 // Family Tree actions
 export async function getFamilyTree(ownerUserId: string): Promise<FamilyTree> {
-  const ref = adminDb.collection("familyTrees").doc(ownerUserId);
-  const snap = await ref.get();
-  if (snap.exists) {
+  const ref = fsDoc(db, "familyTrees", ownerUserId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
     return snap.data() as FamilyTree;
   }
   const empty: FamilyTree = {
@@ -296,7 +303,7 @@ export async function getFamilyTree(ownerUserId: string): Promise<FamilyTree> {
     edges: [],
     updatedAt: new Date().toISOString(),
   };
-  await ref.set(empty, { merge: true });
+  await setDoc(ref, empty, { merge: true });
   return empty;
 }
 
@@ -310,10 +317,7 @@ export async function addFamilyMember(
     members: [...tree.members.filter((m) => m.id !== member.id), member],
     updatedAt: new Date().toISOString(),
   };
-  await adminDb
-    .collection("familyTrees")
-    .doc(ownerUserId)
-    .set(updated, { merge: true });
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
   return updated;
 }
 
@@ -335,9 +339,6 @@ export async function linkFamilyRelation(
     edges: [...withoutDup, edge],
     updatedAt: new Date().toISOString(),
   };
-  await adminDb
-    .collection("familyTrees")
-    .doc(ownerUserId)
-    .set(updated, { merge: true });
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
   return updated;
 }
