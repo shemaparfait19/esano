@@ -417,38 +417,52 @@ export default function FamilyTreePage() {
   }
 
   async function saveAddRelative() {
-    if (!user || !tree || !addName.trim() || !addLinkTo) return;
-    const anchor = memberById(addLinkTo);
+    if (!user || !tree || !addName.trim()) return;
+    const hasAnchor = !!addLinkTo && members.length > 0;
+    const anchor = hasAnchor ? memberById(addLinkTo) : undefined;
     const place = relationToPlacement(addRelation);
     const baseMember: FamilyTreeMember = {
       id: uuidv4(),
       fullName: addName.trim(),
       birthPlace: addBirthPlace || undefined,
       photoUrl: addPhotoUrl || undefined,
-      x: (anchor?.x ?? DEFAULT_NODE.x) + place.dx,
-      y: (anchor?.y ?? DEFAULT_NODE.y) + place.dy,
+      x: (anchor?.x ?? DEFAULT_NODE.x) + (hasAnchor ? place.dx : 0),
+      y: (anchor?.y ?? DEFAULT_NODE.y) + (hasAnchor ? place.dy : 0),
     };
+
     const relType: string =
       addRelation === "other" ? customRelation || "relative" : addRelation;
     const toParent = ["father", "mother", "parent"].includes(relType);
-    const edge: FamilyTreeEdge = {
-      fromId: toParent ? baseMember.id : addLinkTo,
-      toId: toParent ? addLinkTo : baseMember.id,
-      relation: toParent ? "parent" : (relType as FamilyRelation),
-    } as FamilyTreeEdge;
-    const updated: FamilyTree = {
-      ...tree,
-      members: [...tree.members, baseMember],
-      edges: [...tree.edges, edge],
-      updatedAt: new Date().toISOString(),
-    };
+
+    let next: FamilyTree;
+    if (hasAnchor) {
+      const edge: FamilyTreeEdge = {
+        fromId: toParent ? baseMember.id : addLinkTo!,
+        toId: toParent ? addLinkTo! : baseMember.id,
+        relation: toParent ? "parent" : (relType as FamilyRelation),
+      } as FamilyTreeEdge;
+      next = {
+        ...tree,
+        members: [...tree.members, baseMember],
+        edges: [...tree.edges, edge],
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      // First person: just create the member without an edge
+      next = {
+        ...tree,
+        members: [...tree.members, baseMember],
+        updatedAt: new Date().toISOString(),
+      } as FamilyTree;
+    }
+
     setOpenAdd(false);
     setAddName("");
     setAddBirthPlace("");
     setAddPhotoUrl("");
     setCustomRelation("");
-    setTree(updated);
-    await persistTree(updated, true);
+    setTree(next);
+    await persistTree(next, true);
   }
 
   // Edit / Delete / Unlink
@@ -588,21 +602,31 @@ export default function FamilyTreePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Link To</Label>
-                    <Select value={addLinkTo} onValueChange={setAddLinkTo}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select person" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {members.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.fullName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {members.length > 0 ? (
+                    <div>
+                      <Label>Link To</Label>
+                      <Select value={addLinkTo} onValueChange={setAddLinkTo}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select person" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {members.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.fullName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label>First person</Label>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        This will create your first person in the tree. You can
+                        link relatives later.
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {addRelation === "other" && (
                   <div>
