@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { askGenealogyAssistant } from "@/ai/flows/ai-genealogy-assistant";
-import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs"; // ensure Node runtime (not edge)
 export const dynamic = "force-dynamic"; // avoid caching
@@ -32,24 +31,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // Gather optional user context (profile + tiny tree)
+    // Gather optional user context (profile + tiny tree) using Admin SDK
     let userContext = undefined as string | undefined;
     if (userId && typeof userId === "string") {
       try {
         const [profileSnap, treeSnap] = await Promise.all([
-          getDoc(doc(db, "users", userId)),
-          getDoc(doc(db, "familyTrees", userId)),
+          adminDb.collection("users").doc(userId).get(),
+          adminDb.collection("familyTrees").doc(userId).get(),
         ]);
-        const profile = profileSnap.exists() ? profileSnap.data() : undefined;
-        const tree = treeSnap.exists() ? treeSnap.data() : undefined;
-        // Keep context concise
+        const profile = profileSnap.exists ? profileSnap.data() : undefined;
+        const tree = treeSnap.exists ? treeSnap.data() : undefined;
         const ctx = {
           profile: profile
             ? {
-                fullName: profile.fullName,
-                birthPlace: profile.birthPlace,
-                clanOrCulturalInfo: profile.clanOrCulturalInfo,
-                relativesNames: profile.relativesNames,
+                fullName: (profile as any).fullName,
+                birthPlace: (profile as any).birthPlace,
+                clanOrCulturalInfo: (profile as any).clanOrCulturalInfo,
+                relativesNames: (profile as any).relativesNames,
               }
             : undefined,
           tree: tree
