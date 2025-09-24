@@ -9,6 +9,7 @@ import { Send, Bot, User, Loader2 } from "lucide-react";
 // import { getAssistantResponse } from '@/app/actions';
 import { cn } from "@/lib/utils";
 import { Logo } from "../logo";
+import { useAuth } from "@/contexts/auth-context";
 
 type Message = {
   id: number;
@@ -21,6 +22,7 @@ export function ChatAssistant() {
   const [input, setInput] = useState("");
   const [isPending, startTransition] = useTransition();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -35,30 +37,37 @@ export function ChatAssistant() {
     e.preventDefault();
     if (!input.trim() || isPending) return;
 
-    const userMessage: Message = {
-      id: Date.now(),
-      role: "user",
-      text: input,
-    };
+    const userMessage: Message = { id: Date.now(), role: "user", text: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
     startTransition(async () => {
-      const res = await fetch("/api/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: input }),
-      });
-      const data = await res.json();
-      const assistantResponseText =
-        data?.response ??
-        "I'm sorry, I'm having trouble connecting right now. Please try again later.";
-      const assistantMessage: Message = {
-        id: Date.now() + 1,
-        role: "assistant",
-        text: assistantResponseText,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      try {
+        const res = await fetch("/api/assistant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: userMessage.text, userId: user?.uid }),
+        });
+        const data = await res.json();
+        const assistantResponseText =
+          data?.response ??
+          "I'm sorry, I'm having trouble connecting right now. Please try again later.";
+        const assistantMessage: Message = {
+          id: Date.now() + 1,
+          role: "assistant",
+          text: assistantResponseText,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            role: "assistant",
+            text: "I couldn't reach the assistant service. Please try again in a moment.",
+          },
+        ]);
+      }
     });
   };
 
