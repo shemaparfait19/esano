@@ -52,6 +52,9 @@ export interface FamilyTreeMember {
   birthDate?: string;
   birthPlace?: string;
   photoUrl?: string;
+  // Canvas coordinates for interactive board rendering
+  x?: number; // px
+  y?: number; // px
 }
 
 export interface FamilyTreeEdge {
