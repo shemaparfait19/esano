@@ -64,11 +64,8 @@ const RELATIONS: (
   "other",
 ];
 
-// Remove undefined values recursively to satisfy Firestore constraints
 function sanitize<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value.map((v) => sanitize(v)) as any;
-  }
+  if (Array.isArray(value)) return value.map((v) => sanitize(v)) as any;
   if (value && typeof value === "object") {
     const out: any = {};
     Object.entries(value as any).forEach(([k, v]) => {
@@ -109,6 +106,10 @@ export default function FamilyTreePage() {
     nodeY: number;
   } | null>(null);
 
+  // Board prefs
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+
   // Add Relative Modal
   const [openAdd, setOpenAdd] = useState(false);
   const [addName, setAddName] = useState("");
@@ -129,6 +130,13 @@ export default function FamilyTreePage() {
   >("child");
   const [addCustomRelation, setAddCustomRelation] = useState("");
   const [addLinkTo, setAddLinkTo] = useState<string>("");
+
+  // Edit Member Modal
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editMember, setEditMember] = useState<FamilyTreeMember | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editBirthPlace, setEditBirthPlace] = useState("");
+  const [editPhotoUrl, setEditPhotoUrl] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -195,7 +203,6 @@ export default function FamilyTreePage() {
     }
   }
 
-  // Node dragging handlers
   function onNodeMouseDown(e: React.MouseEvent, id: string) {
     if (!tree) return;
     const m = memberById(id);
@@ -227,7 +234,23 @@ export default function FamilyTreePage() {
 
   async function onCanvasMouseUp() {
     if (!dragId || !tree) return;
-    const next = tree;
+    // Snap last moved node to grid if enabled
+    let next = tree;
+    if (snapToGrid) {
+      const size = 20;
+      const nextMembers = tree.members.map((m) =>
+        m.id === dragId
+          ? {
+              ...m,
+              x: Math.round((m.x ?? 0) / size) * size,
+              y: Math.round((m.y ?? 0) / size) * size,
+            }
+          : m
+      );
+      next = { ...tree, members: nextMembers };
+      setTree(next);
+    }
+    const moved = dragId;
     setDragId(null);
     dragRef.current = null;
     await persistTree(next);
@@ -241,7 +264,7 @@ export default function FamilyTreePage() {
   }
 
   function onCanvasMouseDown(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).dataset["nodetype"]) return; // ignore if on node
+    if ((e.target as HTMLElement).dataset["nodetype"]) return;
     panRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -249,7 +272,6 @@ export default function FamilyTreePage() {
       originY: offset.y,
     };
   }
-
   function onCanvasPanMove(e: React.MouseEvent) {
     if (!panRef.current) return;
     const dx = e.clientX - panRef.current.startX;
@@ -259,7 +281,6 @@ export default function FamilyTreePage() {
       y: panRef.current.originY + dy,
     });
   }
-
   function onCanvasPanUp() {
     panRef.current = null;
   }
@@ -294,7 +315,7 @@ export default function FamilyTreePage() {
   function resetPositions() {
     if (!tree) return;
     const nextMembers = tree.members.map((m, i) =>
-      assignIfMissingPosition({ ...m, x: undefined, y: undefined }, i)
+      assignIfMissingPosition({ ...m, x: undefined, y: undefined } as any, i)
     );
     const next = { ...tree, members: nextMembers } as FamilyTree;
     setTree(next);
@@ -302,7 +323,6 @@ export default function FamilyTreePage() {
   }
 
   function relationToPlacement(rel: string) {
-    // Returns dx, dy to offset new node from the anchor node by relation
     switch (rel) {
       case "father":
       case "mother":
@@ -316,30 +336,16 @@ export default function FamilyTreePage() {
         return { dx: 0, dy: -280 };
       case "grandchild":
         return { dx: 0, dy: 280 };
-      case "sibling":
-      case "cousin":
-      case "aunt":
-      case "uncle":
-      case "niece":
-      case "nephew":
-      case "step-parent":
-      case "step-child":
-      case "guardian":
       default:
         return { dx: 220, dy: 0 };
     }
   }
 
-  // Auto-arrange hierarchy positions
   async function autoArrange() {
-    if (!tree) return;
-    if (members.length === 0) return;
-
-    // Build edges maps
+    if (!tree || members.length === 0) return;
     const parentsOf = new Map<string, string[]>();
     const childrenOf = new Map<string, string[]>();
-    const sameLevel = new Map<string, string[]>(); // spouse/sibling
-
+    const sameLevel = new Map<string, string[]>();
     for (const e of tree.edges) {
       if (e.relation === "parent") {
         const parent = e.fromId,
@@ -356,13 +362,10 @@ export default function FamilyTreePage() {
         sameLevel.set(e.toId, [...(sameLevel.get(e.toId) ?? []), e.fromId]);
       }
     }
-
-    // Pick anchor (first member) and BFS to assign levels
     const anchor = members[0].id;
     const level = new Map<string, number>();
     level.set(anchor, 0);
     const queue: string[] = [anchor];
-
     while (queue.length) {
       const cur = queue.shift()!;
       const curLevel = level.get(cur)!;
@@ -385,27 +388,18 @@ export default function FamilyTreePage() {
         }
       }
     }
-
-    // Assign default level 0 for unconnected nodes
-    for (const m of members) {
-      if (!level.has(m.id)) level.set(m.id, 0);
-    }
-
-    // Compute positions row by row
+    for (const m of members) if (!level.has(m.id)) level.set(m.id, 0);
     const byRow = new Map<number, FamilyTreeMember[]>();
     for (const m of members) {
       const row = level.get(m.id) ?? 0;
       byRow.set(row, [...(byRow.get(row) ?? []), m]);
     }
-
     const spacingX = 240,
       spacingY = 160;
-    // Determine min row to start at 0 visually
     const rows = Array.from(byRow.keys()).sort((a, b) => a - b);
     const minRow = rows[0] ?? 0;
-
     const nextMembers = members.map((m) => {
-      const row = (level.get(m.id) ?? 0) - minRow; // shift up if needed
+      const row = (level.get(m.id) ?? 0) - minRow;
       const idx = (byRow.get(level.get(m.id) ?? 0) ?? []).findIndex(
         (x) => x.id === m.id
       );
@@ -415,14 +409,12 @@ export default function FamilyTreePage() {
         y: 120 + row * spacingY,
       } as FamilyTreeMember;
     });
-
     const next = { ...tree, members: nextMembers } as FamilyTree;
     setTree(next);
     await persistTree(next, true);
     fitToContent();
   }
 
-  // Add relative modal save
   async function saveAddRelative() {
     if (!user || !tree || !addName.trim() || !addLinkTo) return;
     const anchor = memberById(addLinkTo);
@@ -435,17 +427,14 @@ export default function FamilyTreePage() {
       x: (anchor?.x ?? DEFAULT_NODE.x) + place.dx,
       y: (anchor?.y ?? DEFAULT_NODE.y) + place.dy,
     };
-
     const relType: string =
-      addRelation === "other" ? addCustomRelation || "relative" : addRelation;
+      addRelation === "other" ? customRelation || "relative" : addRelation;
     const toParent = ["father", "mother", "parent"].includes(relType);
-
     const edge: FamilyTreeEdge = {
       fromId: toParent ? baseMember.id : addLinkTo,
       toId: toParent ? addLinkTo : baseMember.id,
       relation: toParent ? "parent" : (relType as FamilyRelation),
     } as FamilyTreeEdge;
-
     const updated: FamilyTree = {
       ...tree,
       members: [...tree.members, baseMember],
@@ -456,9 +445,58 @@ export default function FamilyTreePage() {
     setAddName("");
     setAddBirthPlace("");
     setAddPhotoUrl("");
-    setAddCustomRelation("");
+    setCustomRelation("");
     setTree(updated);
     await persistTree(updated, true);
+  }
+
+  // Edit / Delete / Unlink
+  function openEditMember(m: FamilyTreeMember) {
+    setEditMember(m);
+    setEditName(m.fullName);
+    setEditBirthPlace(m.birthPlace ?? "");
+    setEditPhotoUrl(m.photoUrl ?? "");
+    setOpenEdit(true);
+  }
+  async function saveEditMember() {
+    if (!tree || !editMember) return;
+    const nextMembers = tree.members.map((m) =>
+      m.id === editMember.id
+        ? {
+            ...m,
+            fullName: editName.trim() || m.fullName,
+            birthPlace: editBirthPlace || undefined,
+            photoUrl: editPhotoUrl || undefined,
+          }
+        : m
+    );
+    const next = { ...tree, members: nextMembers } as FamilyTree;
+    setOpenEdit(false);
+    setTree(next);
+    await persistTree(next, true);
+  }
+  async function deleteMember(id: string) {
+    if (!tree) return;
+    const nextMembers = tree.members.filter((m) => m.id !== id);
+    const nextEdges = tree.edges.filter(
+      (e) => e.fromId !== id && e.toId !== id
+    );
+    const next = {
+      ...tree,
+      members: nextMembers,
+      edges: nextEdges,
+    } as FamilyTree;
+    setTree(next);
+    await persistTree(next, true);
+  }
+  async function unlinkEdge(a: string, b: string, rel: FamilyRelation) {
+    if (!tree) return;
+    const nextEdges = tree.edges.filter(
+      (e) => !(e.fromId === a && e.toId === b && e.relation === rel)
+    );
+    const next = { ...tree, edges: nextEdges } as FamilyTree;
+    setTree(next);
+    await persistTree(next, true);
   }
 
   return (
@@ -508,7 +546,12 @@ export default function FamilyTreePage() {
           <Button variant="outline" onClick={resetPositions}>
             Reset Positions
           </Button>
-          <Button onClick={autoArrange}>Auto Arrange (Hierarchy)</Button>
+          <Button variant="outline" onClick={() => setShowGrid((v) => !v)}>
+            {showGrid ? "Hide Grid" : "Show Grid"}
+          </Button>
+          <Button variant="outline" onClick={() => setSnapToGrid((v) => !v)}>
+            {snapToGrid ? "Snap: On" : "Snap: Off"}
+          </Button>
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button>Add Relative</Button>
@@ -564,8 +607,8 @@ export default function FamilyTreePage() {
                   <div>
                     <Label>Custom Relation</Label>
                     <Input
-                      value={addCustomRelation}
-                      onChange={(e) => setAddCustomRelation(e.target.value)}
+                      value={customRelation}
+                      onChange={(e) => setCustomRelation(e.target.value)}
                       placeholder="e.g., great-grandmother"
                     />
                   </div>
@@ -612,6 +655,14 @@ export default function FamilyTreePage() {
           onCanvasPanUp();
           onCanvasMouseUp();
         }}
+        style={
+          showGrid
+            ? {
+                backgroundImage: `linear-gradient(to right, hsl(var(--muted-foreground)/.12) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--muted-foreground)/.12) 1px, transparent 1px)`,
+                backgroundSize: `20px 20px`,
+              }
+            : undefined
+        }
       >
         <div
           className="absolute inset-0 origin-top-left"
@@ -619,7 +670,6 @@ export default function FamilyTreePage() {
             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
           }}
         >
-          {/* Edges layer */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
             {(tree?.edges ?? []).map((e, idx) => {
               const a = assignIfMissingPosition(
@@ -631,7 +681,7 @@ export default function FamilyTreePage() {
                 idx + 1
               );
               if (!a || !b) return null;
-              const x1 = (a.x ?? DEFAULT_NODE.x) + 100; // center of card
+              const x1 = (a.x ?? DEFAULT_NODE.x) + 100;
               const y1 = (a.y ?? DEFAULT_NODE.y) + 40;
               const x2 = (b.x ?? DEFAULT_NODE.x) + 100;
               const y2 = (b.y ?? DEFAULT_NODE.y) + 40;
@@ -657,7 +707,6 @@ export default function FamilyTreePage() {
             })}
           </svg>
 
-          {/* Nodes layer */}
           {(members ?? []).map((m, i) => {
             const mm = assignIfMissingPosition(m, i);
             const x = mm.x ?? DEFAULT_NODE.x;
@@ -666,11 +715,28 @@ export default function FamilyTreePage() {
               <div
                 key={mm.id}
                 data-nodetype="person"
-                className="absolute w-[200px] select-none"
+                className="absolute w-[220px] select-none"
                 style={{ transform: `translate(${x}px, ${y}px)` }}
                 onMouseDown={(e) => onNodeMouseDown(e, mm.id)}
+                onDoubleClick={() => openEditMember(mm)}
               >
-                <div className="rounded-lg border bg-card shadow-sm p-3">
+                <div className="rounded-lg border bg-card shadow-sm p-3 relative">
+                  <div className="absolute right-2 top-2 flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditMember(mm)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteMember(mm.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
                   <div className="flex items-center gap-3">
                     <img
                       src={
@@ -700,10 +766,10 @@ export default function FamilyTreePage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-xl text-primary">
-            Quick Link Relationship
+            Quick Link / Unlink Relationship
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
+        <CardContent className="grid gap-3 md:grid-cols-5">
           <Select onValueChange={setFromId} value={fromId}>
             <SelectTrigger>
               <SelectValue placeholder="From member" />
@@ -774,8 +840,53 @@ export default function FamilyTreePage() {
           >
             Link
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => unlinkEdge(fromId, toId, relation)}
+          >
+            Unlink
+          </Button>
         </CardContent>
       </Card>
+
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Person</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Birth Place</Label>
+                <Input
+                  value={editBirthPlace}
+                  onChange={(e) => setEditBirthPlace(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Photo URL</Label>
+                <Input
+                  value={editPhotoUrl}
+                  onChange={(e) => setEditPhotoUrl(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenEdit(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveEditMember}>Save</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
