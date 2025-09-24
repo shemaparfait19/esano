@@ -2,9 +2,17 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState } from "react";
-// import { getMyConnectionRequests, respondToConnectionRequest } from "@/app/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+} from "firebase/firestore";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
@@ -15,11 +23,31 @@ export default function NotificationsPage() {
     let ignore = false;
     async function load() {
       if (!user) return;
-      const res = await fetch(`/api/requests?userId=${user.uid}`);
-      const { incoming, outgoing } = await res.json();
-      if (!ignore) {
-        setIncoming(incoming);
-        setOutgoing(outgoing);
+      const ref = collection(db, "connectionRequests");
+      try {
+        const incomingQ = query(
+          ref,
+          where("toUserId", "==", user.uid),
+          where("status", "==", "pending")
+        );
+        const outgoingQ = query(
+          ref,
+          where("fromUserId", "==", user.uid),
+          where("status", "==", "pending")
+        );
+        const [inSnap, outSnap] = await Promise.all([
+          getDocs(incomingQ),
+          getDocs(outgoingQ),
+        ]);
+        if (!ignore) {
+          setIncoming(inSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          setOutgoing(outSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        }
+      } catch {
+        if (!ignore) {
+          setIncoming([]);
+          setOutgoing([]);
+        }
       }
     }
     load();
@@ -29,16 +57,30 @@ export default function NotificationsPage() {
   }, [user]);
 
   const act = async (id: string, status: "accepted" | "declined") => {
-    await fetch("/api/requests", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
-    });
+    await setDoc(
+      doc(db, "connectionRequests", id),
+      { status, respondedAt: new Date().toISOString() },
+      { merge: true }
+    );
+    // reload lists
     if (!user) return;
-    const res = await fetch(`/api/requests?userId=${user.uid}`);
-    const data = await res.json();
-    setIncoming(data.incoming);
-    setOutgoing(data.outgoing);
+    const ref = collection(db, "connectionRequests");
+    const incomingQ = query(
+      ref,
+      where("toUserId", "==", user.uid),
+      where("status", "==", "pending")
+    );
+    const outgoingQ = query(
+      ref,
+      where("fromUserId", "==", user.uid),
+      where("status", "==", "pending")
+    );
+    const [inSnap, outSnap] = await Promise.all([
+      getDocs(incomingQ),
+      getDocs(outgoingQ),
+    ]);
+    setIncoming(inSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    setOutgoing(outSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
   return (
