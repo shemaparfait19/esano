@@ -12,7 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { sendConnectionRequest } from "@/app/actions";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import React, { useTransition } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -29,7 +30,17 @@ export function SuggestionCard({ suggestion }: Props) {
   const onRequest = () => {
     if (!user) return;
     startTransition(async () => {
-      await sendConnectionRequest(user.uid, suggestion.userId);
+      const id = `${user.uid}_${suggestion.userId}`;
+      await setDoc(
+        doc(db, "connectionRequests", id),
+        {
+          fromUserId: user.uid,
+          toUserId: suggestion.userId,
+          status: "pending",
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
     });
   };
 

@@ -14,7 +14,9 @@ import { ArrowRight, Dna, Globe, Users, BarChart, Bot } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/contexts/auth-context";
 import { useEffect, useState } from "react";
-import { getSuggestedMatches, type SuggestedMatch } from "@/app/actions";
+import type { SuggestedMatch } from "@/app/actions";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { SuggestionCard } from "@/components/dashboard/suggestion-card";
 
 const features = [
@@ -54,9 +56,66 @@ export default function DashboardPage() {
     let ignore = false;
     async function load() {
       if (!user) return;
-      const res = await fetch(`/api/suggestions?userId=${user.uid}`);
-      const data = await res.json();
-      const s = data?.suggestions ?? [];
+      const usersSnap = await getDocs(collection(db, "users"));
+      const meDoc = usersSnap.docs.find((d) => d.id === user.uid);
+      const me = meDoc ? (meDoc.data() as any) : null;
+      if (!me) {
+        if (!ignore) setSuggestions([]);
+        return;
+      }
+      const list: SuggestedMatch[] = [] as any;
+      usersSnap.docs.forEach((d) => {
+        if (d.id === user.uid) return;
+        const other = d.data() as any;
+        let score = 0;
+        const reasons: string[] = [];
+        const myNames = (me.relativesNames ?? []).map((n: string) =>
+          n.toLowerCase()
+        );
+        const otherNames = (other.relativesNames ?? []).map((n: string) =>
+          n.toLowerCase()
+        );
+        const shared = myNames.filter((n: string) => otherNames.includes(n));
+        if (shared.length) {
+          score += Math.min(0.4, shared.length * 0.1);
+          reasons.push(`Shared relatives: ${shared.slice(0, 3).join(", ")}`);
+        }
+        if (
+          me.birthPlace &&
+          other.birthPlace &&
+          me.birthPlace.toLowerCase() === other.birthPlace.toLowerCase()
+        ) {
+          score += 0.25;
+          reasons.push("Same birth place");
+        }
+        if (
+          me.clanOrCulturalInfo &&
+          other.clanOrCulturalInfo &&
+          me.clanOrCulturalInfo.toLowerCase() ===
+            other.clanOrCulturalInfo.toLowerCase()
+        ) {
+          score += 0.25;
+          reasons.push("Matching clan/cultural info");
+        }
+        if (me.fullName && other.fullName) {
+          const a = me.fullName.toLowerCase();
+          const b = other.fullName.toLowerCase();
+          if (a.includes(b) || b.includes(a)) {
+            score += 0.1;
+            reasons.push("Similar full name");
+          }
+        }
+        if (score > 0) {
+          list.push({
+            userId: d.id,
+            fullName: other.fullName,
+            score: Math.min(1, score),
+            reasons,
+          } as any);
+        }
+      });
+      list.sort((x: any, y: any) => y.score - x.score);
+      const s = list.slice(0, 9);
       if (!ignore) setSuggestions(s);
     }
     load();
@@ -69,9 +128,15 @@ export default function DashboardPage() {
     let ignore = false;
     async function loadCounts() {
       if (!user) return;
-      const res = await fetch(`/api/requests?userId=${user.uid}`);
-      const data = await res.json();
-      if (!ignore) setIncomingCount(data.incoming.length);
+      // Count pending incoming requests via Firestore rules
+      const reqsRef = collection(db, "connectionRequests");
+      const q = query(
+        reqsRef,
+        where("toUserId", "==", user.uid),
+        where("status", "==", "pending")
+      );
+      const snap = await getDocs(q);
+      if (!ignore) setIncomingCount(snap.size);
     }
     loadCounts();
     return () => {
