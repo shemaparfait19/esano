@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { v4 as uuidv4 } from "uuid";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 export default function FamilyTreePage() {
   const { user } = useAuth();
@@ -33,9 +35,19 @@ export default function FamilyTreePage() {
     let ignore = false;
     async function load() {
       if (!user) return;
-      const res = await fetch(`/api/family-tree?userId=${user.uid}`);
-      const { tree } = await res.json();
-      const t = tree;
+      const ref = doc(db, "familyTrees", user.uid);
+      const snap = await getDoc(ref);
+      const t: FamilyTree = snap.exists()
+        ? (snap.data() as FamilyTree)
+        : {
+            ownerUserId: user.uid,
+            members: [],
+            edges: [],
+            updatedAt: new Date().toISOString(),
+          };
+      if (!snap.exists()) {
+        await setDoc(ref, t, { merge: true });
+      }
       if (!ignore) setTree(t);
     }
     load();
@@ -53,13 +65,18 @@ export default function FamilyTreePage() {
       fullName: newName.trim(),
       birthPlace: newBirthPlace || undefined,
     };
-    const res = await fetch("/api/family-tree", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "member", ownerUserId: user.uid, member }),
-    });
-    const { tree } = await res.json();
-    const updated = tree;
+    const current: FamilyTree = tree ?? {
+      ownerUserId: user.uid,
+      members: [],
+      edges: [],
+      updatedAt: new Date().toISOString(),
+    };
+    const updated: FamilyTree = {
+      ...current,
+      members: [...current.members.filter((m) => m.id !== member.id), member],
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, "familyTrees", user.uid), updated, { merge: true });
     setTree(updated);
     setNewName("");
     setNewBirthPlace("");
@@ -68,13 +85,26 @@ export default function FamilyTreePage() {
   async function addRelation() {
     if (!user || !fromId || !toId || fromId === toId) return;
     const edge: FamilyTreeEdge = { fromId, toId, relation: relation as any };
-    const res = await fetch("/api/family-tree", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "edge", ownerUserId: user.uid, edge }),
-    });
-    const { tree } = await res.json();
-    const updated = tree;
+    const current: FamilyTree = tree ?? {
+      ownerUserId: user.uid,
+      members: [],
+      edges: [],
+      updatedAt: new Date().toISOString(),
+    };
+    const withoutDup = current.edges.filter(
+      (e) =>
+        !(
+          e.fromId === edge.fromId &&
+          e.toId === edge.toId &&
+          e.relation === edge.relation
+        )
+    );
+    const updated: FamilyTree = {
+      ...current,
+      edges: [...withoutDup, edge],
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(doc(db, "familyTrees", user.uid), updated, { merge: true });
     setTree(updated);
   }
 
