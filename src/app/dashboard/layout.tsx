@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart,
   Bot,
@@ -10,8 +10,8 @@ import {
   LayoutGrid,
   Users,
   Loader2,
-} from 'lucide-react';
-import { Logo } from '@/components/logo';
+} from "lucide-react";
+import { Logo } from "@/components/logo";
 import {
   Sidebar,
   SidebarContent,
@@ -20,19 +20,20 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarProvider,
-  SidebarInset
-} from '@/components/ui/sidebar';
-import { DashboardHeader } from '@/components/dashboard/dashboard-header';
-import { useAuth } from '@/contexts/auth-context';
-import { useEffect } from 'react';
+  SidebarInset,
+} from "@/components/ui/sidebar";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { useAuth } from "@/contexts/auth-context";
+import { useEffect } from "react";
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
-  { href: '/dashboard/dna-analysis', icon: Dna, label: 'DNA Analysis' },
-  { href: '/dashboard/relatives', icon: Users, label: 'Relatives' },
-  { href: '/dashboard/ancestry', icon: Globe, label: 'Ancestry' },
-  { href: '/dashboard/insights', icon: BarChart, label: 'Insights' },
-  { href: '/dashboard/assistant', icon: Bot, label: 'Assistant' },
+  { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
+  { href: "/dashboard/dna-analysis", icon: Dna, label: "DNA Analysis" },
+  { href: "/dashboard/relatives", icon: Users, label: "Relatives" },
+  { href: "/dashboard/family-tree", icon: Globe, label: "Family Tree" },
+  { href: "/dashboard/ancestry", icon: Globe, label: "Ancestry" },
+  { href: "/dashboard/insights", icon: BarChart, label: "Insights" },
+  { href: "/dashboard/assistant", icon: Bot, label: "Assistant" },
 ];
 
 export default function DashboardLayout({
@@ -41,14 +42,23 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { user, loading } = useAuth();
+  const { user, loading, userProfile } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!loading && user && pathname.startsWith("/dashboard")) {
+      const isOnSetup = pathname === "/dashboard/profile-setup";
+      if (!userProfile?.profileCompleted && !isOnSetup) {
+        router.replace("/dashboard/profile-setup");
+      }
+    }
+  }, [loading, user, userProfile, pathname, router]);
 
   if (loading) {
     return (
@@ -57,7 +67,7 @@ export default function DashboardLayout({
       </div>
     );
   }
-  
+
   if (!user) {
     return null;
   }

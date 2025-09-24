@@ -1,15 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useTransition, useCallback, type ChangeEvent, type DragEvent } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { analyzeDna } from '@/app/actions';
-import { useAppContext } from '@/contexts/app-context';
-import { UploadCloud, File, Loader2, CheckCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
+import {
+  useState,
+  useTransition,
+  useCallback,
+  type ChangeEvent,
+  type DragEvent,
+} from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { analyzeDna } from "@/app/actions";
+import { useAppContext } from "@/contexts/app-context";
+import { UploadCloud, File, Loader2, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 export function DnaUploadForm() {
   const [file, setFile] = useState<File | null>(null);
@@ -17,20 +23,26 @@ export function DnaUploadForm() {
   const { toast } = useToast();
   const router = useRouter();
   const { user } = useAuth();
-  const { setRelatives, setAncestry, setInsights, setIsAnalyzing, setAnalysisCompleted } = useAppContext();
+  const {
+    setRelatives,
+    setAncestry,
+    setInsights,
+    setIsAnalyzing,
+    setAnalysisCompleted,
+  } = useAppContext();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = (selectedFile: File | null) => {
     if (selectedFile) {
-        // Basic validation for file type could be added here
-        setFile(selectedFile);
+      // Basic validation for file type could be added here
+      setFile(selectedFile);
     }
   };
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     handleFileChange(e.target.files?.[0] ?? null);
   };
-  
+
   const onDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -53,17 +65,17 @@ export function DnaUploadForm() {
   const handleSubmit = () => {
     if (!file) {
       toast({
-        title: 'No file selected',
-        description: 'Please select a DNA file to upload.',
-        variant: 'destructive',
+        title: "No file selected",
+        description: "Please select a DNA file to upload.",
+        variant: "destructive",
       });
       return;
     }
     if (!user) {
-       toast({
-        title: 'Not authenticated',
-        description: 'You must be logged in to analyze DNA.',
-        variant: 'destructive',
+      toast({
+        title: "Not authenticated",
+        description: "You must be logged in to analyze DNA.",
+        variant: "destructive",
       });
       return;
     }
@@ -72,26 +84,55 @@ export function DnaUploadForm() {
       setIsAnalyzing(true);
       setAnalysisCompleted(false);
       try {
-        // In a real app, you'd read the file content. For this demo, we'll send a mock string.
-        const mockDnaData = `mock_dna_data_from_${file.name}`;
-        const results = await analyzeDna(user.uid, mockDnaData, file.name);
-        
+        // Basic client-side validation
+        const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSizeBytes) {
+          throw new Error(
+            "File is too large. Please upload a file under 10MB."
+          );
+        }
+
+        const isTextLike =
+          file.type.startsWith("text/") || /\.(txt|csv|tsv)$/i.test(file.name);
+        if (!isTextLike) {
+          throw new Error(
+            "Unsupported file type. Please upload raw text DNA data (.txt/.csv)."
+          );
+        }
+
+        // Read file contents
+        const dnaText = await file.text();
+        const trimmed = dnaText.trim();
+        if (!trimmed) {
+          throw new Error("The selected file appears to be empty.");
+        }
+
+        // Cap extremely long inputs to protect prompt & bandwidth
+        const maxChars = 200_000; // ~200KB of text
+        const safeDnaData =
+          trimmed.length > maxChars ? trimmed.slice(0, maxChars) : trimmed;
+
+        const results = await analyzeDna(user.uid, safeDnaData, file.name);
+
         setRelatives(results.relatives);
         setAncestry(results.ancestry);
         setInsights(results.insights);
         setAnalysisCompleted(true);
 
         toast({
-          title: 'Analysis Complete',
+          title: "Analysis Complete",
           description: "Your DNA has been analyzed. Explore your results!",
-          variant: 'default',
+          variant: "default",
         });
-        router.push('/dashboard/relatives');
+        router.push("/dashboard/relatives");
       } catch (error) {
         toast({
-          title: 'Analysis Failed',
-          description: error instanceof Error ? error.message : "An unknown error occurred.",
-          variant: 'destructive',
+          title: "Analysis Failed",
+          description:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred.",
+          variant: "destructive",
         });
         setAnalysisCompleted(false);
       } finally {
@@ -102,35 +143,45 @@ export function DnaUploadForm() {
 
   return (
     <div className="space-y-6">
-       <div 
+      <div
         className={cn(
-            "relative flex flex-col items-center justify-center w-full p-12 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
-            isDragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
-            file && "border-primary bg-primary/5"
+          "relative flex flex-col items-center justify-center w-full p-12 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
+          isDragOver
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/50",
+          file && "border-primary bg-primary/5"
         )}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
-        onClick={() => document.getElementById('file-upload')?.click()}
+        onClick={() => document.getElementById("file-upload")?.click()}
       >
         <div className="flex flex-col items-center justify-center text-center">
-            {isPending ? (
-                <Loader2 className="h-12 w-12 text-primary animate-spin" />
-            ) : file ? (
-                <CheckCircle className="h-12 w-12 text-primary" />
-            ) : (
-                <UploadCloud className="h-12 w-12 text-muted-foreground" />
-            )}
-            <p className="mt-4 text-lg font-semibold text-foreground">
-                {isPending ? "Analyzing..." : file ? `${file.name} selected` : "Drag & drop your file here"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-                {isPending ? "This may take a moment." : file ? "Click to choose a different file" : "or click to browse"}
-            </p>
+          {isPending ? (
+            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+          ) : file ? (
+            <CheckCircle className="h-12 w-12 text-primary" />
+          ) : (
+            <UploadCloud className="h-12 w-12 text-muted-foreground" />
+          )}
+          <p className="mt-4 text-lg font-semibold text-foreground">
+            {isPending
+              ? "Analyzing..."
+              : file
+              ? `${file.name} selected`
+              : "Drag & drop your file here"}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {isPending
+              ? "This may take a moment."
+              : file
+              ? "Click to choose a different file"
+              : "or click to browse"}
+          </p>
         </div>
-        <Input 
-          id="file-upload" 
-          type="file" 
+        <Input
+          id="file-upload"
+          type="file"
           className="absolute h-full w-full opacity-0 cursor-pointer"
           onChange={onFileChange}
           disabled={isPending}
@@ -139,16 +190,23 @@ export function DnaUploadForm() {
 
       {file && (
         <div className="flex items-center justify-between p-3 border rounded-lg bg-background">
-            <div className="flex items-center gap-3">
-                <File className="h-6 w-6 text-primary" />
-                <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">{Math.round(file.size / 1024)} KB</p>
-                </div>
+          <div className="flex items-center gap-3">
+            <File className="h-6 w-6 text-primary" />
+            <div>
+              <p className="font-medium">{file.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {Math.round(file.size / 1024)} KB
+              </p>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => setFile(null)} disabled={isPending}>
-              Remove
-            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFile(null)}
+            disabled={isPending}
+          >
+            Remove
+          </Button>
         </div>
       )}
 
@@ -164,7 +222,7 @@ export function DnaUploadForm() {
             Analyzing...
           </>
         ) : (
-          'Start Analysis'
+          "Start Analysis"
         )}
       </Button>
     </div>

@@ -3,18 +3,66 @@ import type { AncestryEstimationOutput } from "@/ai/schemas/ai-ancestry-estimati
 import type { GenerationalInsightsOutput } from "@/ai/schemas/ai-generational-insights";
 
 export interface UserProfile {
-    userId: string;
-    email?: string;
-    displayName?: string;
-    dnaData?: string;
-    dnaFileName?: string;
-    analysis?: {
-        relatives: AnalyzeDnaAndPredictRelativesOutput;
-        ancestry: AncestryEstimationOutput;
-        insights: GenerationalInsightsOutput;
-        completedAt: string;
-    };
-    familyTree?: any; // Define a proper type for family tree later
-    createdAt?: string;
-    updatedAt?: string;
+  userId: string;
+  email?: string;
+  displayName?: string;
+  fullName?: string;
+  birthDate?: string; // ISO date string
+  birthPlace?: string;
+  clanOrCulturalInfo?: string;
+  relativesNames?: string[]; // simple list of known relatives names
+  profileCompleted?: boolean;
+  dnaData?: string;
+  dnaFileName?: string;
+  analysis?: {
+    relatives: AnalyzeDnaAndPredictRelativesOutput;
+    ancestry: AncestryEstimationOutput;
+    insights: GenerationalInsightsOutput;
+    completedAt: string;
+  };
+  familyTree?: any; // Define a proper type for family tree later
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type ConnectionRequestStatus = "pending" | "accepted" | "declined";
+
+export interface ConnectionRequest {
+  id?: string;
+  fromUserId: string;
+  toUserId: string;
+  status: ConnectionRequestStatus;
+  createdAt: string; // ISO
+  respondedAt?: string; // ISO
+}
+
+// Family Tree
+export type FamilyRelation =
+  | "parent"
+  | "child"
+  | "sibling"
+  | "spouse"
+  | "grandparent"
+  | "grandchild"
+  | "cousin";
+
+export interface FamilyTreeMember {
+  id: string; // uuid
+  fullName: string;
+  birthDate?: string;
+  birthPlace?: string;
+  photoUrl?: string;
+}
+
+export interface FamilyTreeEdge {
+  fromId: string;
+  toId: string;
+  relation: FamilyRelation;
+}
+
+export interface FamilyTree {
+  ownerUserId: string;
+  members: FamilyTreeMember[];
+  edges: FamilyTreeEdge[];
+  updatedAt: string;
 }
