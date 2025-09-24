@@ -49,9 +49,17 @@ export type FamilyRelation =
 export interface FamilyTreeMember {
   id: string; // uuid
   fullName: string;
+  gender?: "male" | "female" | "nonbinary" | "unknown";
   birthDate?: string;
+  deathDate?: string;
   birthPlace?: string;
+  occupation?: string;
+  notes?: string;
   photoUrl?: string;
+  photos?: string[];
+  tags?: string[];
+  isDeceased?: boolean;
+  externalIds?: Record<string, string>; // e.g., ancestry/myheritage ids
   // Canvas coordinates for interactive board rendering
   x?: number; // px
   y?: number; // px
@@ -61,6 +69,8 @@ export interface FamilyTreeEdge {
   fromId: string;
   toId: string;
   relation: FamilyRelation;
+  certainty?: number; // 0..1
+  notes?: string;
 }
 
 export interface FamilyTree {

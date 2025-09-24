@@ -29,15 +29,50 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 const DEFAULT_NODE = { x: 100, y: 100 };
+const RELATIONS: (
+  | FamilyRelation
+  | "father"
+  | "mother"
+  | "aunt"
+  | "uncle"
+  | "niece"
+  | "nephew"
+  | "step-parent"
+  | "step-child"
+  | "guardian"
+  | "other"
+)[] = [
+  "father",
+  "mother",
+  "parent",
+  "child",
+  "sibling",
+  "spouse",
+  "grandparent",
+  "grandchild",
+  "aunt",
+  "uncle",
+  "niece",
+  "nephew",
+  "cousin",
+  "step-parent",
+  "step-child",
+  "guardian",
+  "other",
+];
 
 export default function FamilyTreePage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [tree, setTree] = useState<FamilyTree | null>(null);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
   const [relation, setRelation] = useState<FamilyRelation>("parent");
+  const [customRelation, setCustomRelation] = useState("");
 
   // Zoom / Pan
   const [scale, setScale] = useState(1);
@@ -63,7 +98,20 @@ export default function FamilyTreePage() {
   const [addName, setAddName] = useState("");
   const [addBirthPlace, setAddBirthPlace] = useState("");
   const [addPhotoUrl, setAddPhotoUrl] = useState("");
-  const [addRelation, setAddRelation] = useState<FamilyRelation>("child");
+  const [addRelation, setAddRelation] = useState<
+    | FamilyRelation
+    | "father"
+    | "mother"
+    | "aunt"
+    | "uncle"
+    | "niece"
+    | "nephew"
+    | "step-parent"
+    | "step-child"
+    | "guardian"
+    | "other"
+  >("child");
+  const [addCustomRelation, setAddCustomRelation] = useState("");
   const [addLinkTo, setAddLinkTo] = useState<string>("");
 
   useEffect(() => {
@@ -81,9 +129,14 @@ export default function FamilyTreePage() {
         };
         await setDoc(ref, init, { merge: true });
         setTree(init);
+        setLastSaved(init.updatedAt);
       }
       unsub = onSnapshot(ref, (s) => {
-        if (s.exists()) setTree(s.data() as FamilyTree);
+        if (s.exists()) {
+          const data = s.data() as FamilyTree;
+          setTree(data);
+          setLastSaved(data.updatedAt);
+        }
       });
     })();
     return () => {
@@ -108,13 +161,25 @@ export default function FamilyTreePage() {
     return { ...member, x: gridX, y: gridY };
   }
 
-  async function persistTree(next: FamilyTree) {
+  async function persistTree(next: FamilyTree, showToast = false) {
     if (!user) return;
-    await setDoc(
-      doc(db, "familyTrees", user.uid),
-      { ...next, updatedAt: new Date().toISOString() },
-      { merge: true }
-    );
+    try {
+      const updatedAt = new Date().toISOString();
+      await setDoc(
+        doc(db, "familyTrees", user.uid),
+        { ...next, updatedAt },
+        { merge: true }
+      );
+      setLastSaved(updatedAt);
+      if (showToast)
+        toast({ title: "Saved", description: "Family tree updated." });
+    } catch (e: any) {
+      toast({
+        title: "Save failed",
+        description: e?.message ?? "Try again",
+        variant: "destructive",
+      });
+    }
   }
 
   // Node dragging handlers
@@ -149,9 +214,10 @@ export default function FamilyTreePage() {
 
   async function onCanvasMouseUp() {
     if (!dragId || !tree) return;
+    const next = tree;
     setDragId(null);
     dragRef.current = null;
-    await persistTree(tree);
+    await persistTree(next);
   }
 
   function onWheel(e: React.WheelEvent) {
@@ -185,23 +251,187 @@ export default function FamilyTreePage() {
     panRef.current = null;
   }
 
+  function fitToContent() {
+    if (!tree || members.length === 0) return;
+    const xs = members.map((m) => m.x ?? DEFAULT_NODE.x);
+    const ys = members.map((m) => m.y ?? DEFAULT_NODE.y);
+    const minX = Math.min(...xs),
+      maxX = Math.max(...xs) + 200;
+    const minY = Math.min(...ys),
+      maxY = Math.max(...ys) + 80;
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const viewportW =
+      (document.querySelector("#tree-viewport") as HTMLElement)?.clientWidth ??
+      800;
+    const viewportH =
+      (document.querySelector("#tree-viewport") as HTMLElement)?.clientHeight ??
+      600;
+    const s = Math.max(
+      0.3,
+      Math.min(2, Math.min(viewportW / contentW, viewportH / contentH))
+    );
+    setScale(s);
+    setOffset({
+      x: (viewportW - contentW * s) / 2 - minX * s,
+      y: (viewportH - contentH * s) / 2 - minY * s,
+    });
+  }
+
+  function resetPositions() {
+    if (!tree) return;
+    const nextMembers = tree.members.map((m, i) =>
+      assignIfMissingPosition({ ...m, x: undefined, y: undefined }, i)
+    );
+    const next = { ...tree, members: nextMembers } as FamilyTree;
+    setTree(next);
+    persistTree(next, true);
+  }
+
+  function relationToPlacement(rel: string) {
+    // Returns dx, dy to offset new node from the anchor node by relation
+    switch (rel) {
+      case "father":
+      case "mother":
+      case "parent":
+        return { dx: 0, dy: -140 };
+      case "child":
+        return { dx: 0, dy: 140 };
+      case "spouse":
+        return { dx: 220, dy: 0 };
+      case "grandparent":
+        return { dx: 0, dy: -280 };
+      case "grandchild":
+        return { dx: 0, dy: 280 };
+      case "sibling":
+      case "cousin":
+      case "aunt":
+      case "uncle":
+      case "niece":
+      case "nephew":
+      case "step-parent":
+      case "step-child":
+      case "guardian":
+      default:
+        return { dx: 220, dy: 0 };
+    }
+  }
+
+  // Auto-arrange hierarchy positions
+  async function autoArrange() {
+    if (!tree) return;
+    if (members.length === 0) return;
+
+    // Build edges maps
+    const parentsOf = new Map<string, string[]>();
+    const childrenOf = new Map<string, string[]>();
+    const sameLevel = new Map<string, string[]>(); // spouse/sibling
+
+    for (const e of tree.edges) {
+      if (e.relation === "parent") {
+        const parent = e.fromId,
+          child = e.toId;
+        parentsOf.set(child, [...(parentsOf.get(child) ?? []), parent]);
+        childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), child]);
+      } else if (e.relation === "child") {
+        const parent = e.toId,
+          child = e.fromId;
+        parentsOf.set(child, [...(parentsOf.get(child) ?? []), parent]);
+        childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), child]);
+      } else if (e.relation === "spouse" || e.relation === "sibling") {
+        sameLevel.set(e.fromId, [...(sameLevel.get(e.fromId) ?? []), e.toId]);
+        sameLevel.set(e.toId, [...(sameLevel.get(e.toId) ?? []), e.fromId]);
+      }
+    }
+
+    // Pick anchor (first member) and BFS to assign levels
+    const anchor = members[0].id;
+    const level = new Map<string, number>();
+    level.set(anchor, 0);
+    const queue: string[] = [anchor];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      const curLevel = level.get(cur)!;
+      for (const p of parentsOf.get(cur) ?? []) {
+        if (!level.has(p)) {
+          level.set(p, curLevel - 1);
+          queue.push(p);
+        }
+      }
+      for (const c of childrenOf.get(cur) ?? []) {
+        if (!level.has(c)) {
+          level.set(c, curLevel + 1);
+          queue.push(c);
+        }
+      }
+      for (const s of sameLevel.get(cur) ?? []) {
+        if (!level.has(s)) {
+          level.set(s, curLevel);
+          queue.push(s);
+        }
+      }
+    }
+
+    // Assign default level 0 for unconnected nodes
+    for (const m of members) {
+      if (!level.has(m.id)) level.set(m.id, 0);
+    }
+
+    // Compute positions row by row
+    const byRow = new Map<number, FamilyTreeMember[]>();
+    for (const m of members) {
+      const row = level.get(m.id) ?? 0;
+      byRow.set(row, [...(byRow.get(row) ?? []), m]);
+    }
+
+    const spacingX = 240,
+      spacingY = 160;
+    // Determine min row to start at 0 visually
+    const rows = Array.from(byRow.keys()).sort((a, b) => a - b);
+    const minRow = rows[0] ?? 0;
+
+    const nextMembers = members.map((m) => {
+      const row = (level.get(m.id) ?? 0) - minRow; // shift up if needed
+      const idx = (byRow.get(level.get(m.id) ?? 0) ?? []).findIndex(
+        (x) => x.id === m.id
+      );
+      return {
+        ...m,
+        x: 120 + idx * spacingX,
+        y: 120 + row * spacingY,
+      } as FamilyTreeMember;
+    });
+
+    const next = { ...tree, members: nextMembers } as FamilyTree;
+    setTree(next);
+    await persistTree(next, true);
+    fitToContent();
+  }
+
   // Add relative modal save
   async function saveAddRelative() {
     if (!user || !tree || !addName.trim() || !addLinkTo) return;
+    const anchor = memberById(addLinkTo);
+    const place = relationToPlacement(addRelation);
     const baseMember: FamilyTreeMember = {
       id: uuidv4(),
       fullName: addName.trim(),
       birthPlace: addBirthPlace || undefined,
       photoUrl: addPhotoUrl || undefined,
-      x: (memberById(addLinkTo)?.x ?? DEFAULT_NODE.x) + 160,
-      y: (memberById(addLinkTo)?.y ?? DEFAULT_NODE.y) + 0,
+      x: (anchor?.x ?? DEFAULT_NODE.x) + place.dx,
+      y: (anchor?.y ?? DEFAULT_NODE.y) + place.dy,
     };
 
+    const relType: string =
+      addRelation === "other" ? addCustomRelation || "relative" : addRelation;
+    const toParent = ["father", "mother", "parent"].includes(relType);
+
     const edge: FamilyTreeEdge = {
-      fromId: addRelation === "parent" ? baseMember.id : addLinkTo,
-      toId: addRelation === "parent" ? addLinkTo : baseMember.id,
-      relation: addRelation,
-    };
+      fromId: toParent ? baseMember.id : addLinkTo,
+      toId: toParent ? addLinkTo : baseMember.id,
+      relation: toParent ? "parent" : (relType as FamilyRelation),
+    } as FamilyTreeEdge;
 
     const updated: FamilyTree = {
       ...tree,
@@ -213,20 +443,28 @@ export default function FamilyTreePage() {
     setAddName("");
     setAddBirthPlace("");
     setAddPhotoUrl("");
+    setAddCustomRelation("");
     setTree(updated);
-    await persistTree(updated);
+    await persistTree(updated, true);
   }
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-headline text-3xl font-bold text-primary md:text-4xl">
-          Family Tree
-        </h1>
-        <p className="mt-2 text-lg text-muted-foreground">
-          Drag people around, add relatives, and link relationships. Changes
-          save automatically.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-headline text-3xl font-bold text-primary md:text-4xl">
+            Family Tree
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            Drag people around, add relatives, and link relationships. Changes
+            save automatically.
+          </p>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {lastSaved
+            ? `Last saved: ${new Date(lastSaved).toLocaleString()}`
+            : ""}
+        </div>
       </div>
 
       <Card>
@@ -251,6 +489,13 @@ export default function FamilyTreePage() {
           >
             Zoom Out
           </Button>
+          <Button variant="outline" onClick={fitToContent}>
+            Fit to Content
+          </Button>
+          <Button variant="outline" onClick={resetPositions}>
+            Reset Positions
+          </Button>
+          <Button onClick={autoArrange}>Auto Arrange (Hierarchy)</Button>
           <Dialog open={openAdd} onOpenChange={setOpenAdd}>
             <DialogTrigger asChild>
               <Button>Add Relative</Button>
@@ -272,21 +517,13 @@ export default function FamilyTreePage() {
                     <Label>Relation</Label>
                     <Select
                       value={addRelation}
-                      onValueChange={(v) => setAddRelation(v as FamilyRelation)}
+                      onValueChange={(v) => setAddRelation(v as any)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select relation" />
                       </SelectTrigger>
                       <SelectContent>
-                        {[
-                          "parent",
-                          "child",
-                          "sibling",
-                          "spouse",
-                          "grandparent",
-                          "grandchild",
-                          "cousin",
-                        ].map((r) => (
+                        {RELATIONS.map((r) => (
                           <SelectItem key={r} value={r}>
                             {r}
                           </SelectItem>
@@ -310,6 +547,16 @@ export default function FamilyTreePage() {
                     </Select>
                   </div>
                 </div>
+                {addRelation === "other" && (
+                  <div>
+                    <Label>Custom Relation</Label>
+                    <Input
+                      value={addCustomRelation}
+                      onChange={(e) => setAddCustomRelation(e.target.value)}
+                      placeholder="e.g., great-grandmother"
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Birth Place (optional)</Label>
@@ -336,6 +583,7 @@ export default function FamilyTreePage() {
       </Card>
 
       <div
+        id="tree-viewport"
         className="relative h-[70vh] w-full border rounded-md overflow-hidden bg-background"
         onWheel={onWheel}
         onMouseDown={onCanvasMouseDown}
@@ -374,6 +622,12 @@ export default function FamilyTreePage() {
               const y1 = (a.y ?? DEFAULT_NODE.y) + 40;
               const x2 = (b.x ?? DEFAULT_NODE.x) + 100;
               const y2 = (b.y ?? DEFAULT_NODE.y) + 40;
+              const style =
+                e.relation === "spouse"
+                  ? { strokeDasharray: "6,4" }
+                  : e.relation === "cousin"
+                  ? { strokeDasharray: "3,3" }
+                  : {};
               return (
                 <line
                   key={idx}
@@ -384,6 +638,7 @@ export default function FamilyTreePage() {
                   stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   strokeOpacity={0.5}
+                  {...style}
                 />
               );
             })}
@@ -501,7 +756,7 @@ export default function FamilyTreePage() {
                 updatedAt: new Date().toISOString(),
               };
               setTree(updated);
-              await persistTree(updated);
+              await persistTree(updated, true);
             }}
           >
             Link
