@@ -49,7 +49,7 @@ export type FamilyRelation =
 export interface FamilyTreeMember {
   id: string; // uuid
   fullName: string;
-  gender?: "male" | "female" | "nonbinary" | "unknown";
+  gender?: "male" | "female";
   birthDate?: string;
   deathDate?: string;
   birthPlace?: string;

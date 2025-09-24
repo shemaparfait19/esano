@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Pencil, Trash2 } from "lucide-react";
 
 const DEFAULT_NODE = { x: 100, y: 100 };
 const RELATIONS: (
@@ -723,18 +724,20 @@ export default function FamilyTreePage() {
                 <div className="rounded-lg border bg-card shadow-sm p-3 relative">
                   <div className="absolute right-2 top-2 flex gap-1">
                     <Button
-                      size="sm"
-                      variant="outline"
+                      size="icon"
+                      variant="ghost"
+                      title="Edit"
                       onClick={() => openEditMember(mm)}
                     >
-                      Edit
+                      <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
-                      size="sm"
-                      variant="destructive"
+                      size="icon"
+                      variant="ghost"
+                      title="Delete"
                       onClick={() => deleteMember(mm.id)}
                     >
-                      Delete
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                   <div className="flex items-center gap-3">
