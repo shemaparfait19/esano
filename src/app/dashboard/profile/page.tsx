@@ -148,41 +148,45 @@ export default function ProfilePage() {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      const dataToSave = {
+      // Build data object, filtering out empty/undefined values
+      const dataToSave: any = {
         userId: user.uid,
-        // Personal Information
-        firstName: form.firstName || undefined,
-        middleName: form.middleName || undefined,
-        lastName: form.lastName || undefined,
-        preferredName: form.preferredName || undefined,
-        birthDate: form.birthDate || undefined,
-        gender: form.gender || undefined,
-        nationality: form.nationality || undefined,
-        nid: form.nid || undefined,
-        maritalStatus: form.maritalStatus || undefined,
-        phoneNumber: form.phoneNumber || undefined,
-        email: form.email || undefined,
-        province: form.province || undefined,
-        district: form.district || undefined,
-        sector: form.sector || undefined,
-        cell: form.cell || undefined,
-        village: form.village || undefined,
-        preferredLanguage: form.preferredLanguage || undefined,
-        profilePicture: form.profilePicture || undefined,
-        // Legacy fields for compatibility
-        fullName: form.fullName || undefined,
-        birthPlace: form.birthPlace || undefined,
-        clanOrCulturalInfo: form.clanOrCulturalInfo || undefined,
-        relativesNames: relatives,
-        socialMedias: form.socialMedias || undefined,
-        location: form.location || undefined,
-        spouseName: form.spouseName || undefined,
-        // Education and Work as arrays
-        education: form.education.length > 0 ? form.education : undefined,
-        work: form.work.length > 0 ? form.work : undefined,
         updatedAt: new Date().toISOString(),
         profileCompleted: true,
       };
+
+      // Personal Information - only add non-empty values
+      if (form.firstName?.trim()) dataToSave.firstName = form.firstName.trim();
+      if (form.middleName?.trim()) dataToSave.middleName = form.middleName.trim();
+      if (form.lastName?.trim()) dataToSave.lastName = form.lastName.trim();
+      if (form.preferredName?.trim()) dataToSave.preferredName = form.preferredName.trim();
+      if (form.birthDate) dataToSave.birthDate = form.birthDate;
+      if (form.gender) dataToSave.gender = form.gender;
+      if (form.nationality?.trim()) dataToSave.nationality = form.nationality.trim();
+      if (form.nid?.trim()) dataToSave.nid = form.nid.trim();
+      if (form.maritalStatus) dataToSave.maritalStatus = form.maritalStatus;
+      if (form.phoneNumber?.trim()) dataToSave.phoneNumber = form.phoneNumber.trim();
+      if (form.email?.trim()) dataToSave.email = form.email.trim();
+      if (form.province?.trim()) dataToSave.province = form.province.trim();
+      if (form.district?.trim()) dataToSave.district = form.district.trim();
+      if (form.sector?.trim()) dataToSave.sector = form.sector.trim();
+      if (form.cell?.trim()) dataToSave.cell = form.cell.trim();
+      if (form.village?.trim()) dataToSave.village = form.village.trim();
+      if (form.preferredLanguage) dataToSave.preferredLanguage = form.preferredLanguage;
+      if (form.profilePicture?.trim()) dataToSave.profilePicture = form.profilePicture.trim();
+
+      // Legacy fields for compatibility
+      if (form.fullName?.trim()) dataToSave.fullName = form.fullName.trim();
+      if (form.birthPlace?.trim()) dataToSave.birthPlace = form.birthPlace.trim();
+      if (form.clanOrCulturalInfo?.trim()) dataToSave.clanOrCulturalInfo = form.clanOrCulturalInfo.trim();
+      if (relatives.length > 0) dataToSave.relativesNames = relatives;
+      if (form.socialMedias?.trim()) dataToSave.socialMedias = form.socialMedias.trim();
+      if (form.location?.trim()) dataToSave.location = form.location.trim();
+      if (form.spouseName?.trim()) dataToSave.spouseName = form.spouseName.trim();
+
+      // Education and Work as arrays - only add if they have content
+      if (form.education.length > 0) dataToSave.education = form.education;
+      if (form.work.length > 0) dataToSave.work = form.work;
 
       console.log("Data to save:", dataToSave);
 
@@ -274,7 +278,7 @@ export default function ProfilePage() {
           Your Profile
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          View and update your personal and family information.
+          Build your family profile with as much or as little information as you'd like. All details are optional and help improve AI-powered genealogy suggestions.
         </p>
       </div>
       <Card>
@@ -283,12 +287,12 @@ export default function ProfilePage() {
             Profile
           </CardTitle>
           <CardDescription>
-            Keep your details up to date to improve AI suggestions.
+            Fill in your information to improve AI suggestions. All fields are optional - provide as much or as little detail as you prefer. Basic information like name and location helps provide better personalized recommendations.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           <div>
-            <h3 className="font-headline text-lg text-primary mb-4">Personal Information</h3>
+            <h3 className="font-headline text-lg text-primary mb-4">Personal Information (Optional)</h3>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">First Name</label>
@@ -551,21 +555,27 @@ export default function ProfilePage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        console.log('File selected:', file.name, file.size, file.type);
                         try {
                           const formData = new FormData();
                           formData.append('file', file);
+                          console.log('Sending FormData to API');
 
                           const response = await fetch('/api/upload-profile-picture', {
                             method: 'POST',
                             body: formData,
                           });
 
+                          console.log('API response status:', response.status);
+
                           if (response.ok) {
                             const data = await response.json();
+                            console.log('Upload successful, URL:', data.url);
                             setForm((f) => ({ ...f, profilePicture: data.url }));
                             toast({ title: "Profile picture uploaded successfully" });
                           } else {
                             const error = await response.json();
+                            console.log('Upload failed:', error);
                             toast({
                               title: "Upload failed",
                               description: error.error || "Failed to upload profile picture",
@@ -598,7 +608,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <h3 className="font-headline text-lg text-primary mb-4">Education Information</h3>
+            <h3 className="font-headline text-lg text-primary mb-4">Education Information (Optional)</h3>
             <div className="space-y-4">
               {form.education.map((edu, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-4">
@@ -799,7 +809,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <h3 className="font-headline text-lg text-primary mb-4">Work/Job Information</h3>
+            <h3 className="font-headline text-lg text-primary mb-4">Work/Job Information (Optional)</h3>
             <div className="space-y-4">
               {form.work.map((job, index) => (
                 <div key={index} className="border rounded-lg p-4 space-y-4">
@@ -1008,7 +1018,10 @@ export default function ProfilePage() {
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="md:col-span-2">
-              <Button onClick={onSave}>Save Changes</Button>
+              <Button onClick={onSave}>Save Profile</Button>
+              <p className="text-sm text-muted-foreground mt-2">
+                Save anytime - you can always add more information later.
+              </p>
             </div>
           </div>
         </CardContent>
