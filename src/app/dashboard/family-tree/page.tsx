@@ -31,6 +31,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, Trash2 } from "lucide-react";
+import React from "react";
 
 const DEFAULT_NODE = { x: 100, y: 100 };
 const RELATIONS: (
@@ -110,6 +111,16 @@ export default function FamilyTreePage() {
   // Board prefs
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isMarquee, setIsMarquee] = useState(false);
+  const marqueeRef = useRef<{
+    startX: number;
+    startY: number;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
 
   // Add Relative Modal
   const [openAdd, setOpenAdd] = useState(false);
@@ -175,6 +186,72 @@ export default function FamilyTreePage() {
     return members.find((m) => m.id === id);
   }
 
+  function Minimap({
+    members,
+    scale,
+    offset,
+    onNavigate,
+  }: {
+    members: FamilyTreeMember[];
+    scale: number;
+    offset: { x: number; y: number };
+    onNavigate: (next: { x: number; y: number }) => void;
+  }) {
+    const width = 180;
+    const height = 120;
+    // Compute bounds
+    const xs = members.map((m) => m.x ?? DEFAULT_NODE.x);
+    const ys = members.map((m) => m.y ?? DEFAULT_NODE.y);
+    const minX = xs.length ? Math.min(...xs) : 0;
+    const minY = ys.length ? Math.min(...ys) : 0;
+    const maxX = xs.length ? Math.max(...xs) + 220 : 220;
+    const maxY = ys.length ? Math.max(...ys) + 100 : 100;
+    const contentW = Math.max(1, maxX - minX);
+    const contentH = Math.max(1, maxY - minY);
+    const sx = width / contentW;
+    const sy = height / contentH;
+    const s = Math.min(sx, sy);
+
+    function handleClick(e: React.MouseEvent) {
+      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const worldX = cx / s + minX;
+      const worldY = cy / s + minY;
+      // Rough center the viewport to clicked point
+      const viewport = document.querySelector(
+        "#tree-viewport"
+      ) as HTMLElement | null;
+      const vw = viewport?.clientWidth ?? 800;
+      const vh = viewport?.clientHeight ?? 600;
+      const nextX = vw / 2 - worldX * scale;
+      const nextY = vh / 2 - worldY * scale;
+      onNavigate({ x: nextX, y: nextY });
+    }
+
+    return (
+      <div
+        className="absolute bottom-3 right-3 rounded-md border bg-card/80 backdrop-blur p-2 shadow"
+        style={{ width, height }}
+        onClick={handleClick}
+      >
+        <div className="relative w-full h-full bg-background/60">
+          {members.map((m) => {
+            const x = ((m.x ?? DEFAULT_NODE.x) - minX) * s;
+            const y = ((m.y ?? DEFAULT_NODE.y) - minY) * s;
+            return (
+              <div
+                key={m.id}
+                className="absolute bg-primary/70"
+                style={{ left: x, top: y, width: 6, height: 4 }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   function assignIfMissingPosition(
     member: FamilyTreeMember,
     index: number
@@ -208,6 +285,13 @@ export default function FamilyTreePage() {
     if (!tree) return;
     const m = memberById(id);
     if (!m) return;
+    if (e.shiftKey) {
+      setSelectedIds((prev) =>
+        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      );
+    } else if (!selectedIds.includes(id)) {
+      setSelectedIds([id]);
+    }
     setDragId(id);
     dragRef.current = {
       startX: e.clientX,
@@ -221,26 +305,30 @@ export default function FamilyTreePage() {
     if (!dragId || !tree || !dragRef.current) return;
     const dx = (e.clientX - dragRef.current.startX) / scale;
     const dy = (e.clientY - dragRef.current.startY) / scale;
-    const nextMembers = tree.members.map((m) =>
-      m.id === dragId
-        ? {
-            ...m,
-            x: Math.round(dragRef.current!.nodeX + dx),
-            y: Math.round(dragRef.current!.nodeY + dy),
-          }
-        : m
-    );
+    const movingIds = new Set(selectedIds.length ? selectedIds : [dragId]);
+    const nextMembers = tree.members.map((m) => {
+      if (!movingIds.has(m.id)) return m;
+      const baseX =
+        m.id === dragId ? dragRef.current!.nodeX : m.x ?? DEFAULT_NODE.x;
+      const baseY =
+        m.id === dragId ? dragRef.current!.nodeY : m.y ?? DEFAULT_NODE.y;
+      return {
+        ...m,
+        x: Math.round(baseX + dx),
+        y: Math.round(baseY + dy),
+      };
+    });
     setTree({ ...tree, members: nextMembers });
   }
 
   async function onCanvasMouseUp() {
     if (!dragId || !tree) return;
-    // Snap last moved node to grid if enabled
     let next = tree;
     if (snapToGrid) {
       const size = 20;
+      const movingIds = new Set(selectedIds.length ? selectedIds : [dragId]);
       const nextMembers = tree.members.map((m) =>
-        m.id === dragId
+        movingIds.has(m.id)
           ? {
               ...m,
               x: Math.round((m.x ?? 0) / size) * size,
@@ -266,14 +354,51 @@ export default function FamilyTreePage() {
 
   function onCanvasMouseDown(e: React.MouseEvent) {
     if ((e.target as HTMLElement).dataset["nodetype"]) return;
-    panRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      originX: offset.x,
-      originY: offset.y,
-    };
+    if (e.shiftKey) {
+      setIsMarquee(true);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = (e.clientX - rect.left - offset.x) / scale;
+      const y = (e.clientY - rect.top - offset.y) / scale;
+      marqueeRef.current = { startX: x, startY: y, x, y, w: 0, h: 0 };
+    } else {
+      panRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        originX: offset.x,
+        originY: offset.y,
+      };
+    }
   }
   function onCanvasPanMove(e: React.MouseEvent) {
+    if (isMarquee && marqueeRef.current) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = (e.clientX - rect.left - offset.x) / scale;
+      const y = (e.clientY - rect.top - offset.y) / scale;
+      const m = marqueeRef.current;
+      m.w = x - m.startX;
+      m.h = y - m.startY;
+      m.x = Math.min(m.startX, x);
+      m.y = Math.min(m.startY, y);
+      marqueeRef.current = { ...m };
+      if (tree) {
+        const ids = tree.members
+          .filter((mm) => {
+            const mx = mm.x ?? DEFAULT_NODE.x;
+            const my = mm.y ?? DEFAULT_NODE.y;
+            const w = 220,
+              h = 80;
+            return (
+              mx + w >= m.x &&
+              mx <= m.x + Math.abs(m.w) &&
+              my + h >= m.y &&
+              my <= m.y + Math.abs(m.h)
+            );
+          })
+          .map((mm) => mm.id);
+        setSelectedIds(ids);
+      }
+      return;
+    }
     if (!panRef.current) return;
     const dx = e.clientX - panRef.current.startX;
     const dy = e.clientY - panRef.current.startY;
@@ -284,6 +409,10 @@ export default function FamilyTreePage() {
   }
   function onCanvasPanUp() {
     panRef.current = null;
+    if (isMarquee) {
+      setIsMarquee(false);
+      marqueeRef.current = null;
+    }
   }
 
   function fitToContent() {
@@ -312,6 +441,57 @@ export default function FamilyTreePage() {
       y: (viewportH - contentH * s) / 2 - minY * s,
     });
   }
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!tree) return;
+      if (e.key === "Escape") {
+        setSelectedIds([]);
+      }
+      if ((e.key === "a" || e.key === "A") && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setSelectedIds(tree.members.map((m) => m.id));
+      }
+      if (["Delete", "Backspace"].includes(e.key)) {
+        if (selectedIds.length) {
+          const nextMembers = tree.members.filter(
+            (m) => !selectedIds.includes(m.id)
+          );
+          const nextEdges = tree.edges.filter(
+            (ed) =>
+              !selectedIds.includes(ed.fromId) && !selectedIds.includes(ed.toId)
+          );
+          const next = {
+            ...tree,
+            members: nextMembers,
+            edges: nextEdges,
+          } as FamilyTree;
+          setTree(next);
+          persistTree(next, true);
+          setSelectedIds([]);
+        }
+      }
+      const nudge = (dx: number, dy: number) => {
+        if (!selectedIds.length) return;
+        const size = snapToGrid ? 20 : 1;
+        const nextMembers = tree.members.map((m) =>
+          selectedIds.includes(m.id)
+            ? { ...m, x: (m.x ?? 0) + dx * size, y: (m.y ?? 0) + dy * size }
+            : m
+        );
+        const next = { ...tree, members: nextMembers } as FamilyTree;
+        setTree(next);
+        persistTree(next);
+      };
+      if (e.key === "ArrowLeft") nudge(-1, 0);
+      if (e.key === "ArrowRight") nudge(1, 0);
+      if (e.key === "ArrowUp") nudge(0, -1);
+      if (e.key === "ArrowDown") nudge(0, 1);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [tree, selectedIds, snapToGrid]);
 
   function resetPositions() {
     if (!tree) return;
@@ -429,6 +609,7 @@ export default function FamilyTreePage() {
       x: (anchor?.x ?? DEFAULT_NODE.x) + (hasAnchor ? place.dx : 0),
       y: (anchor?.y ?? DEFAULT_NODE.y) + (hasAnchor ? place.dy : 0),
     };
+    // Assign default gender as undefined; users can edit later. Gender remains restricted elsewhere.
 
     const relType: string =
       addRelation === "other" ? customRelation || "relative" : addRelation;
@@ -531,6 +712,13 @@ export default function FamilyTreePage() {
             ? `Last saved: ${new Date(lastSaved).toLocaleString()}`
             : ""}
         </div>
+        {/* Minimap overlay */}
+        <Minimap
+          members={members}
+          scale={scale}
+          offset={offset}
+          onNavigate={(next) => setOffset(next)}
+        />
       </div>
 
       <Card>
@@ -740,7 +928,9 @@ export default function FamilyTreePage() {
               <div
                 key={mm.id}
                 data-nodetype="person"
-                className="absolute w-[220px] select-none"
+                className={`absolute w-[220px] select-none ${
+                  selectedIds.includes(mm.id) ? "ring-2 ring-primary" : ""
+                }`}
                 style={{ transform: `translate(${x}px, ${y}px)` }}
                 onMouseDown={(e) => onNodeMouseDown(e, mm.id)}
                 onDoubleClick={() => openEditMember(mm)}
@@ -787,7 +977,26 @@ export default function FamilyTreePage() {
               </div>
             );
           })}
+
+          {isMarquee && marqueeRef.current && (
+            <div
+              className="absolute border-2 border-primary/50 bg-primary/10 pointer-events-none"
+              style={{
+                left: marqueeRef.current.x,
+                top: marqueeRef.current.y,
+                width: Math.abs(marqueeRef.current.w),
+                height: Math.abs(marqueeRef.current.h),
+              }}
+            />
+          )}
         </div>
+        {/* Minimap overlay */}
+        <Minimap
+          members={members}
+          scale={scale}
+          offset={offset}
+          onNavigate={(next) => setOffset(next)}
+        />
       </div>
 
       <Card>

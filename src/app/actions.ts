@@ -57,6 +57,7 @@ export async function analyzeDna(
     // Gather real comparator DNA from other users
     const usersSnapshot = await adminDb.collection("users").get();
     const otherUsersDnaData: string[] = [];
+    const validUserIds = new Set<string>();
     usersSnapshot.docs.forEach((d) => {
       if (d.id === userId) return;
       const data = d.data() as UserProfile;
@@ -66,6 +67,7 @@ export async function analyzeDna(
         data.dnaData.length > 0
       ) {
         otherUsersDnaData.push(data.dnaData);
+        validUserIds.add(d.id);
       }
     });
 
@@ -89,9 +91,22 @@ export async function analyzeDna(
         otherUsersDnaData: otherUsersDnaData.slice(0, 50),
         userFamilyTreeData: "None",
       };
-      relatives = await withRetry(() =>
+      const raw = await withRetry(() =>
         analyzeDnaAndPredictRelatives(dnaInput)
       );
+
+      // Post-validate: keep only matches that reference a real user with stored dna
+      relatives = (raw || [])
+        .filter(
+          (r) =>
+            !!r && typeof r.userId === "string" && validUserIds.has(r.userId)
+        )
+        .filter(
+          (r) =>
+            r.relationshipProbability === undefined ||
+            r.relationshipProbability >= 0.3
+        )
+        .slice(0, 20);
     } else {
       relatives = [];
     }
