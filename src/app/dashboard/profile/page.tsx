@@ -26,6 +26,14 @@ export default function ProfilePage() {
     birthPlace: "",
     clanOrCulturalInfo: "",
     relativesNames: "",
+    nid: "",
+    phoneNumber: "",
+    socialMedias: "",
+    location: "",
+    maritalStatus: "",
+    spouseName: "",
+    education: "",
+    work: "",
   });
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +55,14 @@ export default function ProfilePage() {
           birthPlace: d.birthPlace ?? "",
           clanOrCulturalInfo: d.clanOrCulturalInfo ?? "",
           relativesNames: (d.relativesNames ?? []).join(", "),
+          nid: d.nid ?? "",
+          phoneNumber: d.phoneNumber ?? "",
+          socialMedias: d.socialMedias ?? "",
+          location: d.location ?? "",
+          maritalStatus: d.maritalStatus ?? "",
+          spouseName: d.spouseName ?? "",
+          education: d.education ?? "",
+          work: d.work ?? "",
         });
       }
       setLoading(false);
@@ -72,6 +88,14 @@ export default function ProfilePage() {
         birthPlace: form.birthPlace || undefined,
         clanOrCulturalInfo: form.clanOrCulturalInfo || undefined,
         relativesNames: relatives,
+        nid: form.nid || undefined,
+        phoneNumber: form.phoneNumber || undefined,
+        socialMedias: form.socialMedias || undefined,
+        location: form.location || undefined,
+        maritalStatus: form.maritalStatus || undefined,
+        spouseName: form.spouseName || undefined,
+        education: form.education || undefined,
+        work: form.work || undefined,
         updatedAt: new Date().toISOString(),
         profileCompleted: true,
       },
@@ -208,6 +232,78 @@ export default function ProfilePage() {
               value={form.relativesNames}
               onChange={(e) =>
                 setForm((f) => ({ ...f, relativesNames: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">National ID</label>
+            <Input
+              value={form.nid}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, nid: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Phone Number</label>
+            <Input
+              value={form.phoneNumber}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, phoneNumber: e.target.value }))
+              }
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">Social Media Links</label>
+            <Textarea
+              value={form.socialMedias}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, socialMedias: e.target.value }))
+              }
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">Current Location</label>
+            <Input
+              value={form.location}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, location: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Marital Status</label>
+            <Input
+              value={form.maritalStatus}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, maritalStatus: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Spouse Name</label>
+            <Input
+              value={form.spouseName}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, spouseName: e.target.value }))
+              }
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">Education Information</label>
+            <Textarea
+              value={form.education}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, education: e.target.value }))
+              }
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium">Work/Job Information</label>
+            <Textarea
+              value={form.work}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, work: e.target.value }))
               }
             />
           </div>
