@@ -133,14 +133,22 @@ export default function ProfilePage() {
   }, [user]);
 
   const onSave = async () => {
-    if (!user) return;
-    const relatives = form.relativesNames
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to save your profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      console.log("Starting save operation for user:", user.uid);
+      const relatives = form.relativesNames
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const dataToSave = {
         userId: user.uid,
         // Personal Information
         firstName: form.firstName || undefined,
@@ -174,10 +182,26 @@ export default function ProfilePage() {
         work: form.work.length > 0 ? form.work : undefined,
         updatedAt: new Date().toISOString(),
         profileCompleted: true,
-      },
-      { merge: true }
-    );
-    toast({ title: "Profile updated" });
+      };
+
+      console.log("Data to save:", dataToSave);
+
+      await setDoc(
+        doc(db, "users", user.uid),
+        dataToSave,
+        { merge: true }
+      );
+
+      console.log("Save operation completed successfully");
+      toast({ title: "Profile updated successfully" });
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      toast({
+        title: "Save failed",
+        description: error?.message || "An error occurred while saving your profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   async function handleSaveDna() {
@@ -524,15 +548,51 @@ export default function ProfilePage() {
                     className="pl-10"
                     type="file"
                     accept="image/*"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        // Handle file upload here
-                        setForm((f) => ({ ...f, profilePicture: file.name }));
+                        try {
+                          const formData = new FormData();
+                          formData.append('file', file);
+
+                          const response = await fetch('/api/upload-profile-picture', {
+                            method: 'POST',
+                            body: formData,
+                          });
+
+                          if (response.ok) {
+                            const data = await response.json();
+                            setForm((f) => ({ ...f, profilePicture: data.url }));
+                            toast({ title: "Profile picture uploaded successfully" });
+                          } else {
+                            const error = await response.json();
+                            toast({
+                              title: "Upload failed",
+                              description: error.error || "Failed to upload profile picture",
+                              variant: "destructive",
+                            });
+                          }
+                        } catch (error) {
+                          console.error('Error uploading file:', error);
+                          toast({
+                            title: "Upload failed",
+                            description: "An error occurred while uploading the file",
+                            variant: "destructive",
+                          });
+                        }
                       }
                     }}
                   />
                 </div>
+                {form.profilePicture && (
+                  <div className="mt-2">
+                    <img
+                      src={form.profilePicture}
+                      alt="Profile preview"
+                      className="w-20 h-20 object-cover rounded-full border"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
