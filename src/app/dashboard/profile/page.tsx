@@ -14,6 +14,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { saveUserDna, analyzeDna } from "@/app/actions";
 
@@ -21,19 +28,36 @@ export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [form, setForm] = useState({
-    fullName: "",
+    // Personal Information
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    preferredName: "",
     birthDate: "",
+    gender: "",
+    nationality: "",
+    nid: "",
+    maritalStatus: "",
+    phoneNumber: "",
+    email: "",
+    province: "",
+    district: "",
+    sector: "",
+    cell: "",
+    village: "",
+    preferredLanguage: "",
+    profilePicture: "",
+    // Legacy fields for compatibility
+    fullName: "",
     birthPlace: "",
     clanOrCulturalInfo: "",
     relativesNames: "",
-    nid: "",
-    phoneNumber: "",
     socialMedias: "",
     location: "",
-    maritalStatus: "",
     spouseName: "",
-    education: "",
-    work: "",
+    // Education and Work as arrays
+    education: [] as any[],
+    work: [] as any[],
   });
   const [loading, setLoading] = useState(true);
 
@@ -50,19 +74,36 @@ export default function ProfilePage() {
       if (snap.exists() && !ignore) {
         const d = snap.data() as any;
         setForm({
-          fullName: d.fullName ?? "",
+          // Personal Information
+          firstName: d.firstName ?? "",
+          middleName: d.middleName ?? "",
+          lastName: d.lastName ?? "",
+          preferredName: d.preferredName ?? "",
           birthDate: d.birthDate ?? "",
+          gender: d.gender ?? "",
+          nationality: d.nationality ?? "",
+          nid: d.nid ?? "",
+          maritalStatus: d.maritalStatus ?? "",
+          phoneNumber: d.phoneNumber ?? "",
+          email: d.email ?? "",
+          province: d.province ?? "",
+          district: d.district ?? "",
+          sector: d.sector ?? "",
+          cell: d.cell ?? "",
+          village: d.village ?? "",
+          preferredLanguage: d.preferredLanguage ?? "",
+          profilePicture: d.profilePicture ?? "",
+          // Legacy fields for compatibility
+          fullName: d.fullName ?? "",
           birthPlace: d.birthPlace ?? "",
           clanOrCulturalInfo: d.clanOrCulturalInfo ?? "",
           relativesNames: (d.relativesNames ?? []).join(", "),
-          nid: d.nid ?? "",
-          phoneNumber: d.phoneNumber ?? "",
           socialMedias: d.socialMedias ?? "",
           location: d.location ?? "",
-          maritalStatus: d.maritalStatus ?? "",
           spouseName: d.spouseName ?? "",
-          education: d.education ?? "",
-          work: d.work ?? "",
+          // Education and Work as arrays
+          education: Array.isArray(d.education) ? d.education : [],
+          work: Array.isArray(d.work) ? d.work : [],
         });
       }
       setLoading(false);
@@ -83,19 +124,36 @@ export default function ProfilePage() {
       doc(db, "users", user.uid),
       {
         userId: user.uid,
-        fullName: form.fullName || undefined,
+        // Personal Information
+        firstName: form.firstName || undefined,
+        middleName: form.middleName || undefined,
+        lastName: form.lastName || undefined,
+        preferredName: form.preferredName || undefined,
         birthDate: form.birthDate || undefined,
+        gender: form.gender || undefined,
+        nationality: form.nationality || undefined,
+        nid: form.nid || undefined,
+        maritalStatus: form.maritalStatus || undefined,
+        phoneNumber: form.phoneNumber || undefined,
+        email: form.email || undefined,
+        province: form.province || undefined,
+        district: form.district || undefined,
+        sector: form.sector || undefined,
+        cell: form.cell || undefined,
+        village: form.village || undefined,
+        preferredLanguage: form.preferredLanguage || undefined,
+        profilePicture: form.profilePicture || undefined,
+        // Legacy fields for compatibility
+        fullName: form.fullName || undefined,
         birthPlace: form.birthPlace || undefined,
         clanOrCulturalInfo: form.clanOrCulturalInfo || undefined,
         relativesNames: relatives,
-        nid: form.nid || undefined,
-        phoneNumber: form.phoneNumber || undefined,
         socialMedias: form.socialMedias || undefined,
         location: form.location || undefined,
-        maritalStatus: form.maritalStatus || undefined,
         spouseName: form.spouseName || undefined,
-        education: form.education || undefined,
-        work: form.work || undefined,
+        // Education and Work as arrays
+        education: form.education.length > 0 ? form.education : undefined,
+        work: form.work.length > 0 ? form.work : undefined,
         updatedAt: new Date().toISOString(),
         profileCompleted: true,
       },
@@ -186,129 +244,567 @@ export default function ProfilePage() {
             Keep your details up to date to improve AI suggestions.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6 md:grid-cols-2">
+        <CardContent className="space-y-8">
           <div>
-            <label className="text-sm font-medium">Full Name</label>
-            <Input
-              value={form.fullName}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, fullName: e.target.value }))
-              }
-            />
+            <h3 className="font-headline text-lg text-primary mb-4">Personal Information</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium">First Name</label>
+                <Input
+                  value={form.firstName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, firstName: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Middle Name</label>
+                <Input
+                  value={form.middleName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, middleName: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Last Name</label>
+                <Input
+                  value={form.lastName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, lastName: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Preferred Name / Nickname</label>
+                <Input
+                  value={form.preferredName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, preferredName: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Date of Birth</label>
+                <Input
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, birthDate: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Gender</label>
+                <Select
+                  value={form.gender}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, gender: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Nationality</label>
+                <Input
+                  value={form.nationality}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, nationality: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">ID / National Number</label>
+                <Input
+                  value={form.nid}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, nid: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Marital Status</label>
+                <Select
+                  value={form.maritalStatus}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, maritalStatus: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select marital status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single</SelectItem>
+                    <SelectItem value="married">Married</SelectItem>
+                    <SelectItem value="divorced">Divorced</SelectItem>
+                    <SelectItem value="widowed">Widowed</SelectItem>
+                    <SelectItem value="separated">Separated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Contact Number</label>
+                <Input
+                  value={form.phoneNumber}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, phoneNumber: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Province</label>
+                <Input
+                  value={form.province}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, province: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">District</label>
+                <Input
+                  value={form.district}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, district: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Sector</label>
+                <Input
+                  value={form.sector}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, sector: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Cell</label>
+                <Input
+                  value={form.cell}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, cell: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium">Village</label>
+                <Input
+                  value={form.village}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, village: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Preferred Language</label>
+                <Select
+                  value={form.preferredLanguage}
+                  onValueChange={(value) =>
+                    setForm((f) => ({ ...f, preferredLanguage: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kinyarwanda">Kinyarwanda</SelectItem>
+                    <SelectItem value="english">English</SelectItem>
+                    <SelectItem value="french">French</SelectItem>
+                    <SelectItem value="swahili">Swahili</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Profile Picture</label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Handle file upload here
+                      setForm((f) => ({ ...f, profilePicture: file.name }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className="text-sm font-medium">Birth Date</label>
-            <Input
-              type="date"
-              value={form.birthDate}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, birthDate: e.target.value }))
-              }
-            />
+            <h3 className="font-headline text-lg text-primary mb-4">Education Information</h3>
+            <div className="space-y-4">
+              {form.education.map((edu, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Education #{index + 1}</h4>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setForm((f) => ({
+                          ...f,
+                          education: f.education.filter((_, i) => i !== index),
+                        }));
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium">Institution Type</label>
+                      <Select
+                        value={edu.institutionType}
+                        onValueChange={(value) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], institutionType: value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="school">School</SelectItem>
+                          <SelectItem value="college">College</SelectItem>
+                          <SelectItem value="university">University</SelectItem>
+                          <SelectItem value="training">Training Center</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Institution Name</label>
+                      <Input
+                        value={edu.institutionName}
+                        onChange={(e) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], institutionName: e.target.value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Level of Education</label>
+                      <Select
+                        value={edu.level}
+                        onValueChange={(value) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], level: value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select level" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="primary">Primary</SelectItem>
+                          <SelectItem value="secondary">Secondary</SelectItem>
+                          <SelectItem value="high_school">High School</SelectItem>
+                          <SelectItem value="diploma">Diploma</SelectItem>
+                          <SelectItem value="bachelor">Bachelor's</SelectItem>
+                          <SelectItem value="master">Master's</SelectItem>
+                          <SelectItem value="phd">PhD</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Field of Study</label>
+                      <Select
+                        value={edu.fieldOfStudy}
+                        onValueChange={(value) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], fieldOfStudy: value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="science">Science</SelectItem>
+                          <SelectItem value="arts">Arts</SelectItem>
+                          <SelectItem value="it">IT</SelectItem>
+                          <SelectItem value="business">Business</SelectItem>
+                          <SelectItem value="agriculture">Agriculture</SelectItem>
+                          <SelectItem value="health">Health</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Start Year</label>
+                      <Input
+                        type="number"
+                        value={edu.startYear}
+                        onChange={(e) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], startYear: e.target.value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">End Year</label>
+                      <Input
+                        type="number"
+                        value={edu.endYear}
+                        onChange={(e) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], endYear: e.target.value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium">Result / Grade</label>
+                      <Select
+                        value={edu.result}
+                        onValueChange={(value) => {
+                          const newEdu = [...form.education];
+                          newEdu[index] = { ...newEdu[index], result: value };
+                          setForm((f) => ({ ...f, education: newEdu }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select result" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="excellent">Excellent</SelectItem>
+                          <SelectItem value="very_good">Very Good</SelectItem>
+                          <SelectItem value="good">Good</SelectItem>
+                          <SelectItem value="average">Average</SelectItem>
+                          <SelectItem value="pass">Pass/Fail</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setForm((f) => ({
+                    ...f,
+                    education: [
+                      ...f.education,
+                      {
+                        institutionType: "",
+                        institutionName: "",
+                        level: "",
+                        fieldOfStudy: "",
+                        startYear: "",
+                        endYear: "",
+                        result: "",
+                      },
+                    ],
+                  }));
+                }}
+              >
+                Add Education
+              </Button>
+            </div>
           </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Birth Place</label>
-            <Input
-              value={form.birthPlace}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, birthPlace: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Clan / Cultural Info</label>
-            <Textarea
-              value={form.clanOrCulturalInfo}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, clanOrCulturalInfo: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">
-              Known Relatives (comma separated)
-            </label>
-            <Input
-              value={form.relativesNames}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, relativesNames: e.target.value }))
-              }
-            />
-          </div>
+
           <div>
-            <label className="text-sm font-medium">National ID</label>
-            <Input
-              value={form.nid}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, nid: e.target.value }))
-              }
-            />
+            <h3 className="font-headline text-lg text-primary mb-4">Work/Job Information</h3>
+            <div className="space-y-4">
+              {form.work.map((job, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Job #{index + 1}</h4>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setForm((f) => ({
+                          ...f,
+                          work: f.work.filter((_, i) => i !== index),
+                        }));
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium">Company / Organization Name</label>
+                      <Input
+                        value={job.companyName}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], companyName: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Company Type</label>
+                      <Select
+                        value={job.companyType}
+                        onValueChange={(value) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], companyType: value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="private">Private</SelectItem>
+                          <SelectItem value="government">Government</SelectItem>
+                          <SelectItem value="ngo">NGO</SelectItem>
+                          <SelectItem value="self_employed">Self-employed</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Job Title / Role</label>
+                      <Input
+                        value={job.jobTitle}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], jobTitle: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Department / Team</label>
+                      <Input
+                        value={job.department}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], department: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Employment Type</label>
+                      <Select
+                        value={job.employmentType}
+                        onValueChange={(value) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], employmentType: value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full_time">Full-time</SelectItem>
+                          <SelectItem value="part_time">Part-time</SelectItem>
+                          <SelectItem value="contract">Contract</SelectItem>
+                          <SelectItem value="internship">Internship</SelectItem>
+                          <SelectItem value="freelance">Freelance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Start Year</label>
+                      <Input
+                        type="number"
+                        value={job.startYear}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], startYear: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">End Year</label>
+                      <Input
+                        type="number"
+                        value={job.endYear}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], endYear: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium">Location</label>
+                      <Input
+                        value={job.location}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], location: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-sm font-medium">Skills Used / Technologies</label>
+                      <Input
+                        value={job.skills}
+                        onChange={(e) => {
+                          const newWork = [...form.work];
+                          newWork[index] = { ...newWork[index], skills: e.target.value };
+                          setForm((f) => ({ ...f, work: newWork }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setForm((f) => ({
+                    ...f,
+                    work: [
+                      ...f.work,
+                      {
+                        companyName: "",
+                        companyType: "",
+                        jobTitle: "",
+                        department: "",
+                        employmentType: "",
+                        startYear: "",
+                        endYear: "",
+                        location: "",
+                        skills: "",
+                      },
+                    ],
+                  }));
+                }}
+              >
+                Add Job
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium">Phone Number</label>
-            <Input
-              value={form.phoneNumber}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, phoneNumber: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Social Media Links</label>
-            <Textarea
-              value={form.socialMedias}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, socialMedias: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Current Location</label>
-            <Input
-              value={form.location}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, location: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Marital Status</label>
-            <Input
-              value={form.maritalStatus}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, maritalStatus: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Spouse Name</label>
-            <Input
-              value={form.spouseName}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, spouseName: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Education Information</label>
-            <Textarea
-              value={form.education}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, education: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-sm font-medium">Work/Job Information</label>
-            <Textarea
-              value={form.work}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, work: e.target.value }))
-              }
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Button onClick={onSave}>Save Changes</Button>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <Button onClick={onSave}>Save Changes</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
