@@ -63,6 +63,13 @@ export interface FamilyTreeMember {
   isDeceased?: boolean;
   visibility?: "public" | "relatives" | "private";
   externalIds?: Record<string, string>; // e.g., ancestry/myheritage ids
+  // Residence information
+  residenceProvince?: string;
+  residenceDistrict?: string;
+  residenceSector?: string;
+  residenceCell?: string;
+  residenceVillage?: string;
+  streetName?: string;
   // Canvas coordinates for interactive board rendering
   x?: number; // px
   y?: number; // px

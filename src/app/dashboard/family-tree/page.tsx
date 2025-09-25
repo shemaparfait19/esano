@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, User, Users, Heart, Baby, Crown, Sparkles } from "lucide-react";
+import { Pencil, User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail } from "lucide-react";
 
 function sanitize<T>(value: T): T {
   if (Array.isArray(value)) return value.map((v) => sanitize(v)) as any;
@@ -82,7 +82,6 @@ export default function FamilyTreePage() {
   const { toast } = useToast();
   const [tree, setTree] = useState<FamilyTree | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
 
   // Add Relative Modal
   const [openAdd, setOpenAdd] = useState(false);
@@ -148,162 +147,94 @@ export default function FamilyTreePage() {
     return members.find((m) => m.id === id);
   }
 
-  // Get user's parents
-  const getUserParents = () => {
-    if (!tree || members.length === 0) return [];
+
+  // Build nuclear family structure
+  const buildNuclearFamily = () => {
+    if (members.length === 0) return null;
 
     const memberMap = new Map(members.map(m => [m.id, m]));
-    const parents = new Set<string>();
-
-    edges.forEach(edge => {
-      if (edge.relation === 'parent') {
-        parents.add(edge.fromId);
-      } else if (edge.relation === 'child') {
-        parents.add(edge.toId);
-      }
-    });
-
-    return Array.from(parents).map(id => memberMap.get(id)).filter(Boolean);
-  };
-
-  // Build hierarchical tree structure starting from selected parent
-  const buildTreeStructure = () => {
-    if (members.length === 0 || !selectedParentId) return null;
-
-    const memberMap = new Map(members.map(m => [m.id, m]));
-    const childrenMap = new Map<string, string[]>();
-    const spousesMap = new Map<string, string[]>();
+    const parentChildMap = new Map<string, string[]>();
+    const spouseMap = new Map<string, string>();
 
     // Build relationship maps
     edges.forEach(edge => {
-      if (edge.relation === 'parent' || edge.relation === 'child') {
-        const parent = edge.relation === 'parent' ? edge.fromId : edge.toId;
-        const child = edge.relation === 'parent' ? edge.toId : edge.fromId;
-
-        if (!childrenMap.has(parent)) childrenMap.set(parent, []);
-        childrenMap.get(parent)!.push(child);
+      if (edge.relation === 'parent') {
+        const parentId = edge.fromId;
+        const childId = edge.toId;
+        if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, []);
+        parentChildMap.get(parentId)!.push(childId);
+      } else if (edge.relation === 'child') {
+        const parentId = edge.toId;
+        const childId = edge.fromId;
+        if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, []);
+        parentChildMap.get(parentId)!.push(childId);
       } else if (edge.relation === 'spouse') {
-        [edge.fromId, edge.toId].forEach(id => {
-          if (!spousesMap.has(id)) spousesMap.set(id, []);
-          spousesMap.get(id)!.push(id === edge.fromId ? edge.toId : edge.fromId);
-        });
+        spouseMap.set(edge.fromId, edge.toId);
+        spouseMap.set(edge.toId, edge.fromId);
       }
     });
 
-    // Build tree recursively starting from selected parent
-    const buildNode = (id: string, level = 0): any => {
-      const member = memberMap.get(id);
-      if (!member) return null;
+    // Find parents (people who have children)
+    const parents = Array.from(parentChildMap.keys()).map(id => memberMap.get(id)).filter(Boolean);
 
-      const children = (childrenMap.get(id) || []).map(childId => buildNode(childId, level + 1));
-      const spouses = (spousesMap.get(id) || []).map(spouseId => memberMap.get(spouseId)).filter(Boolean);
+    if (parents.length === 0) return null;
 
-      return {
-        ...member,
-        level,
-        children,
-        spouses,
-      };
+    // Get all children
+    const allChildren = new Set<string>();
+    parents.forEach(parent => {
+      const children = parentChildMap.get(parent!.id) || [];
+      children.forEach(childId => allChildren.add(childId));
+    });
+
+    const children = Array.from(allChildren).map(id => memberMap.get(id)).filter(Boolean);
+
+    return {
+      parents: parents as FamilyTreeMember[],
+      children: children as FamilyTreeMember[],
+      spouseMap,
+      parentChildMap,
     };
-
-    return buildNode(selectedParentId);
   };
 
-  const userParents = getUserParents();
-  const treeStructure = buildTreeStructure();
+  const nuclearFamily = buildNuclearFamily();
 
-  // Get relationship icon
-  const getRelationIcon = (relation: string) => {
-    switch (relation) {
-      case 'parent': return <Crown className="h-4 w-4 text-blue-500" />;
-      case 'child': return <Baby className="h-4 w-4 text-green-500" />;
-      case 'spouse': return <Heart className="h-4 w-4 text-red-500" />;
-      case 'sibling': return <Users className="h-4 w-4 text-purple-500" />;
-      default: return <Sparkles className="h-4 w-4 text-gray-500" />;
-    }
+  // Profile View Modal
+  const [viewingProfile, setViewingProfile] = useState<FamilyTreeMember | null>(null);
+  const [openProfile, setOpenProfile] = useState(false);
+
+  const openProfileView = (member: FamilyTreeMember) => {
+    setViewingProfile(member);
+    setOpenProfile(true);
   };
 
-  // Tree Node Component
-  const TreeNode = ({ node, isLast = false }: { node: any; isLast?: boolean }) => {
-    const hasChildren = node.children && node.children.length > 0;
-
-    return (
-      <div className="flex flex-col items-center">
-        {/* Node Content */}
-        <div className="flex flex-col items-center space-y-2 mb-4">
-          {/* Profile Image */}
-          <div className="relative">
-            <img
-              src={node.photoUrl || `https://picsum.photos/seed/${node.id}/80`}
-              alt={node.fullName}
-              className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow-md"
-            />
-            <Button
-              size="icon"
-              variant="outline"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border shadow-md"
-              onClick={() => openEditMember(node)}
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
-          </div>
-
-          {/* Name and Info */}
-          <div className="text-center max-w-32">
-            <div className="font-medium text-sm leading-tight">{node.fullName}</div>
-            {node.birthPlace && (
-              <div className="text-xs text-muted-foreground mt-1">{node.birthPlace}</div>
-            )}
-          </div>
-        </div>
-
-        {/* Spouses */}
-        {node.spouses && node.spouses.length > 0 && (
-          <div className="flex items-center space-x-4 mb-4">
-            {node.spouses.map((spouse: FamilyTreeMember) => (
-              <div key={spouse.id} className="flex flex-col items-center space-y-2">
-                <div className="flex items-center space-x-1">
-                  {getRelationIcon('spouse')}
-                  <span className="text-xs text-muted-foreground">Spouse</span>
-                </div>
-                <img
-                  src={spouse.photoUrl || `https://picsum.photos/seed/${spouse.id}/60`}
-                  alt={spouse.fullName}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-muted"
-                />
-                <div className="text-center max-w-24">
-                  <div className="font-medium text-xs leading-tight">{spouse.fullName}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Children */}
-        {hasChildren && (
-          <div className="relative">
-            {/* Vertical line from parent */}
-            <div className="w-px h-8 bg-border mx-auto"></div>
-
-            {/* Horizontal line to children */}
-            <div className="flex items-center justify-center space-x-8 relative">
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-px bg-border"></div>
-
-              {node.children.map((child: any, index: number) => (
-                <div key={child.id} className="flex flex-col items-center">
-                  {/* Vertical line to child */}
-                  <div className="w-px h-8 bg-border"></div>
-
-                  {/* Child node */}
-                  <TreeNode node={child} isLast={index === node.children.length - 1} />
-                </div>
-              ))}
-            </div>
+  // Family Member Card Component
+  const FamilyMemberCard = ({ member, label, isParent = false }: { member: FamilyTreeMember; label?: string; isParent?: boolean }) => (
+    <div className="flex flex-col items-center space-y-2">
+      <div
+        className={`relative cursor-pointer hover:scale-105 transition-transform ${isParent ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+        onClick={() => openProfileView(member)}
+      >
+        <img
+          src={member.photoUrl || `https://picsum.photos/seed/${member.id}/80`}
+          alt={member.fullName}
+          className={`rounded-full object-cover border-2 shadow-md ${isParent ? 'w-20 h-20 border-primary' : 'w-16 h-16 border-muted'}`}
+        />
+        {label && (
+          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-medium">
+            {label}
           </div>
         )}
       </div>
-    );
-  };
+      <div className="text-center max-w-32">
+        <div className={`font-medium text-sm leading-tight ${isParent ? 'text-primary' : ''}`}>
+          {member.fullName}
+        </div>
+        {member.birthPlace && (
+          <div className="text-xs text-muted-foreground mt-1">{member.birthPlace}</div>
+        )}
+      </div>
+    </div>
+  );
 
   // Helper functions for persisting data
   async function persistTree(next: FamilyTree) {
@@ -431,210 +362,336 @@ export default function FamilyTreePage() {
     );
   }
 
-  // Parent Selection Component
-  const ParentSelection = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl text-primary text-center">
-          Choose Parent to Follow Ancestry
-        </CardTitle>
-        <CardDescription className="text-center">
-          Select one of your parents to view their family tree and ancestry lineage.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {userParents.length === 0 ? (
-          <div className="text-center py-8">
-            <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Parents Found</h3>
-            <p className="text-muted-foreground mb-6">
-              You need to add your parents to your family tree first.
-            </p>
-            <Button onClick={() => setOpenAdd(true)}>Add Parent</Button>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {userParents.filter((parent): parent is FamilyTreeMember => parent !== undefined).map((parent) => (
-              <Card
-                key={parent.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setSelectedParentId(parent.id)}
-              >
-                <CardContent className="p-6 text-center">
-                  <img
-                    src={parent.photoUrl || `https://picsum.photos/seed/${parent.id}/80`}
-                    alt={parent.fullName}
-                    className="w-20 h-20 rounded-full object-cover border-2 border-primary mx-auto mb-4"
-                  />
-                  <h3 className="font-medium text-lg mb-1">{parent.fullName}</h3>
-                  {parent.birthPlace && (
-                    <p className="text-sm text-muted-foreground">{parent.birthPlace}</p>
-                  )}
-                  <div className="mt-4">
-                    <Button size="sm" className="w-full">
-                      View {parent.fullName}'s Ancestry
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-headline text-3xl font-bold text-primary md:text-4xl">
-            Family Tree
+            My Family
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            {selectedParentId
-              ? "View your organized family hierarchy. Click the edit button on any person to update their information."
-              : "Choose a parent to explore their family ancestry and lineage."
-            }
+            View your nuclear family. Click on any family member to see their detailed profile.
           </p>
         </div>
-        <div className="flex gap-2">
-          {selectedParentId && (
-            <Button
-              variant="outline"
-              onClick={() => setSelectedParentId(null)}
-            >
-              Change Parent
-            </Button>
-          )}
-          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-            <DialogTrigger asChild>
-              <Button>Add Relative</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add Relative</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-3">
+        <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+          <DialogTrigger asChild>
+            <Button>Add Relative</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Relative</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-3">
+              <div>
+                <Label>Name</Label>
+                <Input
+                  value={addName}
+                  onChange={(e) => setAddName(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Name</Label>
-                  <Input
-                    value={addName}
-                    onChange={(e) => setAddName(e.target.value)}
-                  />
+                  <Label>Relation</Label>
+                  <Select
+                    value={addRelation}
+                    onValueChange={(v) => setAddRelation(v as any)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select relation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RELATIONS.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                {members.length > 0 ? (
                   <div>
-                    <Label>Relation</Label>
-                    <Select
-                      value={addRelation}
-                      onValueChange={(v) => setAddRelation(v as any)}
-                    >
+                    <Label>Link To</Label>
+                    <Select value={addLinkTo} onValueChange={setAddLinkTo}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select relation" />
+                        <SelectValue placeholder="Select person" />
                       </SelectTrigger>
                       <SelectContent>
-                        {RELATIONS.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {r}
+                        {members.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.fullName}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  {members.length > 0 ? (
-                    <div>
-                      <Label>Link To</Label>
-                      <Select value={addLinkTo} onValueChange={setAddLinkTo}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select person" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {members.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.fullName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : (
-                    <div>
-                      <Label>First person</Label>
-                      <div className="text-xs text-muted-foreground mt-2">
-                        This will create your first person in the tree. You can
-                        link relatives later.
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {addRelation === "other" && (
+                ) : (
                   <div>
-                    <Label>Custom Relation</Label>
-                    <Input
-                      value={addCustomRelation}
-                      onChange={(e) => setAddCustomRelation(e.target.value)}
-                      placeholder="e.g., great-grandmother"
-                    />
+                    <Label>First person</Label>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      This will create your first person in the tree. You can
+                      link relatives later.
+                    </div>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Birth Place (optional)</Label>
-                    <Input
-                      value={addBirthPlace}
-                      onChange={(e) => setAddBirthPlace(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Photo URL (optional)</Label>
-                    <Input
-                      value={addPhotoUrl}
-                      onChange={(e) => setAddPhotoUrl(e.target.value)}
-                    />
-                  </div>
+              </div>
+              {addRelation === "other" && (
+                <div>
+                  <Label>Custom Relation</Label>
+                  <Input
+                    value={addCustomRelation}
+                    onChange={(e) => setAddCustomRelation(e.target.value)}
+                    placeholder="e.g., great-grandmother"
+                  />
                 </div>
-                <div className="flex justify-end">
-                  <Button onClick={saveAddRelative}>Save Relative</Button>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Birth Place (optional)</Label>
+                  <Input
+                    value={addBirthPlace}
+                    onChange={(e) => setAddBirthPlace(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Photo URL (optional)</Label>
+                  <Input
+                    value={addPhotoUrl}
+                    onChange={(e) => setAddPhotoUrl(e.target.value)}
+                  />
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div className="flex justify-end">
+                <Button onClick={saveAddRelative}>Save Relative</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {!selectedParentId ? (
-        <ParentSelection />
-      ) : !treeStructure ? (
+      {!nuclearFamily ? (
         <Card>
           <CardContent className="text-center py-12">
             <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Ancestry Data</h3>
+            <h3 className="text-lg font-medium mb-2">No Family Data</h3>
             <p className="text-muted-foreground mb-6">
-              This parent doesn't have ancestry information yet. Add grandparents and ancestors to build their family tree.
+              Start building your family tree by adding your parents and siblings.
             </p>
-            <Button onClick={() => setOpenAdd(true)}>Add Ancestor</Button>
+            <Button onClick={() => setOpenAdd(true)}>Add Family Member</Button>
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-xl text-primary text-center">
-              {(() => {
-                const selectedParent = members.find(m => m.id === selectedParentId);
-                return selectedParent ? `${selectedParent.fullName}'s Family Tree` : 'Family Tree';
-              })()}
+              My Family
             </CardTitle>
+            <CardDescription className="text-center">
+              Click on any family member to view their detailed profile
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-8">
-            <div className="flex justify-center">
-              <div className="max-w-6xl w-full overflow-x-auto">
-                <TreeNode node={treeStructure} />
+            <div className="flex flex-col items-center space-y-8">
+              {/* Parents Section */}
+              <div className="bg-muted/50 rounded-lg p-6 w-full max-w-2xl">
+                <h3 className="text-lg font-medium text-center mb-6 text-primary">Parents</h3>
+                <div className="flex justify-center items-center space-x-12">
+                  {nuclearFamily.parents.map((parent, index) => {
+                    // Determine if this is mother or father based on relationships
+                    const spouseId = nuclearFamily.spouseMap.get(parent.id);
+                    const isFemale = parent.fullName.toLowerCase().includes('mother') ||
+                                   parent.fullName.toLowerCase().includes('mom') ||
+                                   (spouseId && members.find(m => m.id === spouseId)?.fullName.toLowerCase().includes('father'));
+
+                    return (
+                      <FamilyMemberCard
+                        key={parent.id}
+                        member={parent}
+                        label={isFemale ? "Mother" : "Father"}
+                        isParent={true}
+                      />
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Connection Line */}
+              {nuclearFamily.children.length > 0 && (
+                <div className="flex flex-col items-center">
+                  <div className="w-px h-8 bg-border"></div>
+                  <Heart className="h-6 w-6 text-red-500 mb-2" />
+                  <div className="w-px h-8 bg-border"></div>
+                </div>
+              )}
+
+              {/* Children Section */}
+              {nuclearFamily.children.length > 0 && (
+                <div className="w-full max-w-4xl">
+                  <h3 className="text-lg font-medium text-center mb-6 text-primary">Children & Siblings</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+                    {nuclearFamily.children.map((child) => (
+                      <FamilyMemberCard
+                        key={child.id}
+                        member={child}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Profile View Modal */}
+      <Dialog open={openProfile} onOpenChange={setOpenProfile}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">
+              {viewingProfile?.fullName}
+            </DialogTitle>
+          </DialogHeader>
+          {viewingProfile && (
+            <div className="space-y-6">
+              {/* Profile Image and Basic Info */}
+              <div className="flex flex-col items-center space-y-4">
+                <img
+                  src={viewingProfile.photoUrl || `https://picsum.photos/seed/${viewingProfile.id}/120`}
+                  alt={viewingProfile.fullName}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-primary"
+                />
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold">{viewingProfile.fullName}</h3>
+                  {viewingProfile.birthPlace && (
+                    <p className="text-muted-foreground flex items-center justify-center gap-1 mt-1">
+                      <MapPin className="h-4 w-4" />
+                      {viewingProfile.birthPlace}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact Information */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-primary flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  Contact Information
+                </h4>
+                <div className="grid gap-2 pl-6">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Email not available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Phone not available</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Residence Information */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-primary flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Current Residence
+                </h4>
+                <div className="pl-6">
+                  <p className="text-sm text-muted-foreground">
+                    Residence information is available in your personal profile settings.
+                    This helps others locate you for family gatherings and connections.
+                  </p>
+                </div>
+              </div>
+
+              {/* Social Media */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-primary flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Social Media
+                </h4>
+                <div className="pl-6">
+                  <p className="text-sm text-muted-foreground">Social media information not available</p>
+                </div>
+              </div>
+
+              {/* Family Information */}
+              {nuclearFamily && (
+                <div className="space-y-3">
+                  <h4 className="font-medium text-primary flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Family Information
+                  </h4>
+                  <div className="pl-6 space-y-2">
+                    {/* Parents */}
+                    {nuclearFamily.parents.some(p => nuclearFamily.parentChildMap.get(p.id)?.includes(viewingProfile.id)) && (
+                      <div>
+                        <span className="text-sm font-medium">Parents:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {nuclearFamily.parents
+                            .filter(p => nuclearFamily.parentChildMap.get(p.id)?.includes(viewingProfile.id))
+                            .map(parent => (
+                              <span key={parent.id} className="text-sm bg-muted px-2 py-1 rounded">
+                                {parent.fullName}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Spouse */}
+                    {nuclearFamily.spouseMap.has(viewingProfile.id) && (
+                      <div>
+                        <span className="text-sm font-medium">Spouse:</span>
+                        <span className="text-sm bg-muted px-2 py-1 rounded ml-2">
+                          {members.find(m => m.id === nuclearFamily.spouseMap.get(viewingProfile.id))?.fullName}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Children */}
+                    {nuclearFamily.parentChildMap.has(viewingProfile.id) && (
+                      <div>
+                        <span className="text-sm font-medium">Children:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {nuclearFamily.parentChildMap.get(viewingProfile.id)?.map(childId => {
+                            const child = members.find(m => m.id === childId);
+                            return child ? (
+                              <span key={child.id} className="text-sm bg-muted px-2 py-1 rounded">
+                                {child.fullName}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Siblings */}
+                    {nuclearFamily.parents.some(p => {
+                      const siblings = nuclearFamily.parentChildMap.get(p.id) || [];
+                      return siblings.includes(viewingProfile.id) && siblings.length > 1;
+                    }) && (
+                      <div>
+                        <span className="text-sm font-medium">Siblings:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {nuclearFamily.parents.flatMap(p =>
+                            (nuclearFamily.parentChildMap.get(p.id) || [])
+                              .filter(childId => childId !== viewingProfile.id)
+                              .map(childId => members.find(m => m.id === childId))
+                              .filter(Boolean)
+                          ).map(sibling => (
+                            <span key={sibling!.id} className="text-sm bg-muted px-2 py-1 rounded">
+                              {sibling!.fullName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
         <DialogContent>

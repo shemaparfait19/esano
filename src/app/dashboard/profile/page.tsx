@@ -65,6 +65,13 @@ export default function ProfilePage() {
     village: "",
     preferredLanguage: "",
     profilePicture: "",
+    // Residence Information
+    residenceProvince: "",
+    residenceDistrict: "",
+    residenceSector: "",
+    residenceCell: "",
+    residenceVillage: "",
+    streetName: "",
     // Legacy fields for compatibility
     fullName: "",
     birthPlace: "",
@@ -111,6 +118,13 @@ export default function ProfilePage() {
           village: d.village ?? "",
           preferredLanguage: d.preferredLanguage ?? "",
           profilePicture: d.profilePicture ?? "",
+          // Residence Information
+          residenceProvince: d.residenceProvince ?? "",
+          residenceDistrict: d.residenceDistrict ?? "",
+          residenceSector: d.residenceSector ?? "",
+          residenceCell: d.residenceCell ?? "",
+          residenceVillage: d.residenceVillage ?? "",
+          streetName: d.streetName ?? "",
           // Legacy fields for compatibility
           fullName: d.fullName ?? "",
           birthPlace: d.birthPlace ?? "",
@@ -174,6 +188,14 @@ export default function ProfilePage() {
       if (form.village?.trim()) dataToSave.village = form.village.trim();
       if (form.preferredLanguage) dataToSave.preferredLanguage = form.preferredLanguage;
       if (form.profilePicture?.trim()) dataToSave.profilePicture = form.profilePicture.trim();
+
+      // Residence Information
+      if (form.residenceProvince?.trim()) dataToSave.residenceProvince = form.residenceProvince.trim();
+      if (form.residenceDistrict?.trim()) dataToSave.residenceDistrict = form.residenceDistrict.trim();
+      if (form.residenceSector?.trim()) dataToSave.residenceSector = form.residenceSector.trim();
+      if (form.residenceCell?.trim()) dataToSave.residenceCell = form.residenceCell.trim();
+      if (form.residenceVillage?.trim()) dataToSave.residenceVillage = form.residenceVillage.trim();
+      if (form.streetName?.trim()) dataToSave.streetName = form.streetName.trim();
 
       // Legacy fields for compatibility
       if (form.fullName?.trim()) dataToSave.fullName = form.fullName.trim();
@@ -603,6 +625,96 @@ export default function ProfilePage() {
                     />
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-headline text-lg text-primary mb-4">Residence Information (Optional)</h3>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium">Province</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.residenceProvince}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, residenceProvince: e.target.value }))
+                    }
+                    placeholder="e.g., Kigali"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">District</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.residenceDistrict}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, residenceDistrict: e.target.value }))
+                    }
+                    placeholder="e.g., Gasabo"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Sector</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.residenceSector}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, residenceSector: e.target.value }))
+                    }
+                    placeholder="e.g., Kimisagara"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Cell</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.residenceCell}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, residenceCell: e.target.value }))
+                    }
+                    placeholder="e.g., Kimisagara"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Village</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.residenceVillage}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, residenceVillage: e.target.value }))
+                    }
+                    placeholder="e.g., Kagugu"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Street Name</label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.streetName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, streetName: e.target.value }))
+                    }
+                    placeholder="e.g., KG 123 St"
+                  />
+                </div>
               </div>
             </div>
           </div>
