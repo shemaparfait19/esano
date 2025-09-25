@@ -23,6 +23,24 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { saveUserDna, analyzeDna } from "@/app/actions";
+import {
+  User,
+  Calendar,
+  Users,
+  Globe,
+  CreditCard,
+  Heart,
+  Phone,
+  Mail,
+  MapPin,
+  Languages,
+  Camera,
+  GraduationCap,
+  Briefcase,
+  Building,
+  Award,
+  Clock,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -250,202 +268,271 @@ export default function ProfilePage() {
             <div className="grid gap-6 md:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">First Name</label>
-                <Input
-                  value={form.firstName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, firstName: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.firstName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, firstName: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Middle Name</label>
-                <Input
-                  value={form.middleName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, middleName: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.middleName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, middleName: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Last Name</label>
-                <Input
-                  value={form.lastName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, lastName: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.lastName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, lastName: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Preferred Name / Nickname</label>
-                <Input
-                  value={form.preferredName}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, preferredName: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.preferredName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, preferredName: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Date of Birth</label>
-                <Input
-                  type="date"
-                  value={form.birthDate}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, birthDate: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    type="date"
+                    value={form.birthDate}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, birthDate: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Gender</label>
-                <Select
-                  value={form.gender}
-                  onValueChange={(value) =>
-                    setForm((f) => ({ ...f, gender: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Select
+                    value={form.gender}
+                    onValueChange={(value) =>
+                      setForm((f) => ({ ...f, gender: value }))
+                    }
+                  >
+                    <SelectTrigger className="pl-10">
+                      <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Nationality</label>
-                <Input
-                  value={form.nationality}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, nationality: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.nationality}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, nationality: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">ID / National Number</label>
-                <Input
-                  value={form.nid}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, nid: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.nid}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, nid: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Marital Status</label>
-                <Select
-                  value={form.maritalStatus}
-                  onValueChange={(value) =>
-                    setForm((f) => ({ ...f, maritalStatus: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select marital status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="single">Single</SelectItem>
-                    <SelectItem value="married">Married</SelectItem>
-                    <SelectItem value="divorced">Divorced</SelectItem>
-                    <SelectItem value="widowed">Widowed</SelectItem>
-                    <SelectItem value="separated">Separated</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Select
+                    value={form.maritalStatus}
+                    onValueChange={(value) =>
+                      setForm((f) => ({ ...f, maritalStatus: value }))
+                    }
+                  >
+                    <SelectTrigger className="pl-10">
+                      <Heart className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                      <SelectValue placeholder="Select marital status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="married">Married</SelectItem>
+                      <SelectItem value="divorced">Divorced</SelectItem>
+                      <SelectItem value="widowed">Widowed</SelectItem>
+                      <SelectItem value="separated">Separated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Contact Number</label>
-                <Input
-                  value={form.phoneNumber}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, phoneNumber: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.phoneNumber}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, phoneNumber: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Email</label>
-                <Input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, email: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Province</label>
-                <Input
-                  value={form.province}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, province: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.province}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, province: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">District</label>
-                <Input
-                  value={form.district}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, district: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.district}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, district: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Sector</label>
-                <Input
-                  value={form.sector}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, sector: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.sector}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, sector: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Cell</label>
-                <Input
-                  value={form.cell}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, cell: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.cell}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, cell: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Village</label>
-                <Input
-                  value={form.village}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, village: e.target.value }))
-                  }
-                />
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    value={form.village}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, village: e.target.value }))
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Preferred Language</label>
-                <Select
-                  value={form.preferredLanguage}
-                  onValueChange={(value) =>
-                    setForm((f) => ({ ...f, preferredLanguage: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kinyarwanda">Kinyarwanda</SelectItem>
-                    <SelectItem value="english">English</SelectItem>
-                    <SelectItem value="french">French</SelectItem>
-                    <SelectItem value="swahili">Swahili</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Select
+                    value={form.preferredLanguage}
+                    onValueChange={(value) =>
+                      setForm((f) => ({ ...f, preferredLanguage: value }))
+                    }
+                  >
+                    <SelectTrigger className="pl-10">
+                      <Languages className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kinyarwanda">Kinyarwanda</SelectItem>
+                      <SelectItem value="english">English</SelectItem>
+                      <SelectItem value="french">French</SelectItem>
+                      <SelectItem value="swahili">Swahili</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Profile Picture</label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      // Handle file upload here
-                      setForm((f) => ({ ...f, profilePicture: file.name }));
-                    }
-                  }}
-                />
+                <div className="relative">
+                  <Camera className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-10"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Handle file upload here
+                        setForm((f) => ({ ...f, profilePicture: file.name }));
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -473,131 +560,155 @@ export default function ProfilePage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="text-sm font-medium">Institution Type</label>
-                      <Select
-                        value={edu.institutionType}
-                        onValueChange={(value) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], institutionType: value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="school">School</SelectItem>
-                          <SelectItem value="college">College</SelectItem>
-                          <SelectItem value="university">University</SelectItem>
-                          <SelectItem value="training">Training Center</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={edu.institutionType}
+                          onValueChange={(value) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], institutionType: value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        >
+                          <SelectTrigger className="pl-10">
+                            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="school">School</SelectItem>
+                            <SelectItem value="college">College</SelectItem>
+                            <SelectItem value="university">University</SelectItem>
+                            <SelectItem value="training">Training Center</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Institution Name</label>
-                      <Input
-                        value={edu.institutionName}
-                        onChange={(e) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], institutionName: e.target.value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          value={edu.institutionName}
+                          onChange={(e) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], institutionName: e.target.value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Level of Education</label>
-                      <Select
-                        value={edu.level}
-                        onValueChange={(value) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], level: value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="primary">Primary</SelectItem>
-                          <SelectItem value="secondary">Secondary</SelectItem>
-                          <SelectItem value="high_school">High School</SelectItem>
-                          <SelectItem value="diploma">Diploma</SelectItem>
-                          <SelectItem value="bachelor">Bachelor's</SelectItem>
-                          <SelectItem value="master">Master's</SelectItem>
-                          <SelectItem value="phd">PhD</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={edu.level}
+                          onValueChange={(value) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], level: value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        >
+                          <SelectTrigger className="pl-10">
+                            <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                            <SelectValue placeholder="Select level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="primary">Primary</SelectItem>
+                            <SelectItem value="secondary">Secondary</SelectItem>
+                            <SelectItem value="high_school">High School</SelectItem>
+                            <SelectItem value="diploma">Diploma</SelectItem>
+                            <SelectItem value="bachelor">Bachelor's</SelectItem>
+                            <SelectItem value="master">Master's</SelectItem>
+                            <SelectItem value="phd">PhD</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Field of Study</label>
-                      <Select
-                        value={edu.fieldOfStudy}
-                        onValueChange={(value) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], fieldOfStudy: value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="science">Science</SelectItem>
-                          <SelectItem value="arts">Arts</SelectItem>
-                          <SelectItem value="it">IT</SelectItem>
-                          <SelectItem value="business">Business</SelectItem>
-                          <SelectItem value="agriculture">Agriculture</SelectItem>
-                          <SelectItem value="health">Health</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={edu.fieldOfStudy}
+                          onValueChange={(value) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], fieldOfStudy: value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        >
+                          <SelectTrigger className="pl-10">
+                            <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                            <SelectValue placeholder="Select field" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="science">Science</SelectItem>
+                            <SelectItem value="arts">Arts</SelectItem>
+                            <SelectItem value="it">IT</SelectItem>
+                            <SelectItem value="business">Business</SelectItem>
+                            <SelectItem value="agriculture">Agriculture</SelectItem>
+                            <SelectItem value="health">Health</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Start Year</label>
-                      <Input
-                        type="number"
-                        value={edu.startYear}
-                        onChange={(e) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], startYear: e.target.value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          type="number"
+                          value={edu.startYear}
+                          onChange={(e) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], startYear: e.target.value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">End Year</label>
-                      <Input
-                        type="number"
-                        value={edu.endYear}
-                        onChange={(e) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], endYear: e.target.value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          type="number"
+                          value={edu.endYear}
+                          onChange={(e) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], endYear: e.target.value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-sm font-medium">Result / Grade</label>
-                      <Select
-                        value={edu.result}
-                        onValueChange={(value) => {
-                          const newEdu = [...form.education];
-                          newEdu[index] = { ...newEdu[index], result: value };
-                          setForm((f) => ({ ...f, education: newEdu }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select result" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="excellent">Excellent</SelectItem>
-                          <SelectItem value="very_good">Very Good</SelectItem>
-                          <SelectItem value="good">Good</SelectItem>
-                          <SelectItem value="average">Average</SelectItem>
-                          <SelectItem value="pass">Pass/Fail</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={edu.result}
+                          onValueChange={(value) => {
+                            const newEdu = [...form.education];
+                            newEdu[index] = { ...newEdu[index], result: value };
+                            setForm((f) => ({ ...f, education: newEdu }));
+                          }}
+                        >
+                          <SelectTrigger className="pl-10">
+                            <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                            <SelectValue placeholder="Select result" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="excellent">Excellent</SelectItem>
+                            <SelectItem value="very_good">Very Good</SelectItem>
+                            <SelectItem value="good">Good</SelectItem>
+                            <SelectItem value="average">Average</SelectItem>
+                            <SelectItem value="pass">Pass/Fail</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -650,126 +761,160 @@ export default function ProfilePage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="text-sm font-medium">Company / Organization Name</label>
-                      <Input
-                        value={job.companyName}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], companyName: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          value={job.companyName}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], companyName: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Company Type</label>
-                      <Select
-                        value={job.companyType}
-                        onValueChange={(value) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], companyType: value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="private">Private</SelectItem>
-                          <SelectItem value="government">Government</SelectItem>
-                          <SelectItem value="ngo">NGO</SelectItem>
-                          <SelectItem value="self_employed">Self-employed</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={job.companyType}
+                          onValueChange={(value) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], companyType: value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        >
+                          <SelectTrigger className="pl-10">
+                            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="private">Private</SelectItem>
+                            <SelectItem value="government">Government</SelectItem>
+                            <SelectItem value="ngo">NGO</SelectItem>
+                            <SelectItem value="self_employed">Self-employed</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Job Title / Role</label>
-                      <Input
-                        value={job.jobTitle}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], jobTitle: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          value={job.jobTitle}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], jobTitle: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Department / Team</label>
-                      <Input
-                        value={job.department}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], department: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          value={job.department}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], department: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Employment Type</label>
-                      <Select
-                        value={job.employmentType}
-                        onValueChange={(value) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], employmentType: value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="full_time">Full-time</SelectItem>
-                          <SelectItem value="part_time">Part-time</SelectItem>
-                          <SelectItem value="contract">Contract</SelectItem>
-                          <SelectItem value="internship">Internship</SelectItem>
-                          <SelectItem value="freelance">Freelance</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="relative">
+                        <Select
+                          value={job.employmentType}
+                          onValueChange={(value) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], employmentType: value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        >
+                          <SelectTrigger className="pl-10">
+                            <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="full_time">Full-time</SelectItem>
+                            <SelectItem value="part_time">Part-time</SelectItem>
+                            <SelectItem value="contract">Contract</SelectItem>
+                            <SelectItem value="internship">Internship</SelectItem>
+                            <SelectItem value="freelance">Freelance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">Start Year</label>
-                      <Input
-                        type="number"
-                        value={job.startYear}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], startYear: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          type="number"
+                          value={job.startYear}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], startYear: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="text-sm font-medium">End Year</label>
-                      <Input
-                        type="number"
-                        value={job.endYear}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], endYear: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          type="number"
+                          value={job.endYear}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], endYear: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-sm font-medium">Location</label>
-                      <Input
-                        value={job.location}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], location: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          value={job.location}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], location: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-sm font-medium">Skills Used / Technologies</label>
-                      <Input
-                        value={job.skills}
-                        onChange={(e) => {
-                          const newWork = [...form.work];
-                          newWork[index] = { ...newWork[index], skills: e.target.value };
-                          setForm((f) => ({ ...f, work: newWork }));
-                        }}
-                      />
+                      <div className="relative">
+                        <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          className="pl-10"
+                          value={job.skills}
+                          onChange={(e) => {
+                            const newWork = [...form.work];
+                            newWork[index] = { ...newWork[index], skills: e.target.value };
+                            setForm((f) => ({ ...f, work: newWork }));
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
