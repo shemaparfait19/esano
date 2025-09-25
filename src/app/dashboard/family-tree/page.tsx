@@ -8,7 +8,7 @@ import type {
   FamilyTreeEdge,
   FamilyRelation,
 } from "@/types/firestore";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -82,6 +82,7 @@ export default function FamilyTreePage() {
   const { toast } = useToast();
   const [tree, setTree] = useState<FamilyTree | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
 
   // Add Relative Modal
   const [openAdd, setOpenAdd] = useState(false);
@@ -147,9 +148,27 @@ export default function FamilyTreePage() {
     return members.find((m) => m.id === id);
   }
 
-  // Build hierarchical tree structure
+  // Get user's parents
+  const getUserParents = () => {
+    if (!tree || members.length === 0) return [];
+
+    const memberMap = new Map(members.map(m => [m.id, m]));
+    const parents = new Set<string>();
+
+    edges.forEach(edge => {
+      if (edge.relation === 'parent') {
+        parents.add(edge.fromId);
+      } else if (edge.relation === 'child') {
+        parents.add(edge.toId);
+      }
+    });
+
+    return Array.from(parents).map(id => memberMap.get(id)).filter(Boolean);
+  };
+
+  // Build hierarchical tree structure starting from selected parent
   const buildTreeStructure = () => {
-    if (members.length === 0) return null;
+    if (members.length === 0 || !selectedParentId) return null;
 
     const memberMap = new Map(members.map(m => [m.id, m]));
     const childrenMap = new Map<string, string[]>();
@@ -171,17 +190,7 @@ export default function FamilyTreePage() {
       }
     });
 
-    // Find root (person with no parents)
-    const hasParents = new Set();
-    edges.forEach(edge => {
-      if (edge.relation === 'parent') hasParents.add(edge.toId);
-      else if (edge.relation === 'child') hasParents.add(edge.fromId);
-    });
-
-    const rootId = members.find(m => !hasParents.has(m.id))?.id || members[0]?.id;
-    if (!rootId) return null;
-
-    // Build tree recursively
+    // Build tree recursively starting from selected parent
     const buildNode = (id: string, level = 0): any => {
       const member = memberMap.get(id);
       if (!member) return null;
@@ -197,9 +206,10 @@ export default function FamilyTreePage() {
       };
     };
 
-    return buildNode(rootId);
+    return buildNode(selectedParentId);
   };
 
+  const userParents = getUserParents();
   const treeStructure = buildTreeStructure();
 
   // Get relationship icon
@@ -421,6 +431,59 @@ export default function FamilyTreePage() {
     );
   }
 
+  // Parent Selection Component
+  const ParentSelection = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-headline text-2xl text-primary text-center">
+          Choose Parent to Follow Ancestry
+        </CardTitle>
+        <CardDescription className="text-center">
+          Select one of your parents to view their family tree and ancestry lineage.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {userParents.length === 0 ? (
+          <div className="text-center py-8">
+            <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Parents Found</h3>
+            <p className="text-muted-foreground mb-6">
+              You need to add your parents to your family tree first.
+            </p>
+            <Button onClick={() => setOpenAdd(true)}>Add Parent</Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {userParents.filter((parent): parent is FamilyTreeMember => parent !== undefined).map((parent) => (
+              <Card
+                key={parent.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedParentId(parent.id)}
+              >
+                <CardContent className="p-6 text-center">
+                  <img
+                    src={parent.photoUrl || `https://picsum.photos/seed/${parent.id}/80`}
+                    alt={parent.fullName}
+                    className="w-20 h-20 rounded-full object-cover border-2 border-primary mx-auto mb-4"
+                  />
+                  <h3 className="font-medium text-lg mb-1">{parent.fullName}</h3>
+                  {parent.birthPlace && (
+                    <p className="text-sm text-muted-foreground">{parent.birthPlace}</p>
+                  )}
+                  <div className="mt-4">
+                    <Button size="sm" className="w-full">
+                      View {parent.fullName}'s Ancestry
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -429,117 +492,140 @@ export default function FamilyTreePage() {
             Family Tree
           </h1>
           <p className="mt-2 text-lg text-muted-foreground">
-            View your organized family hierarchy. Click the edit button on any person to update their information.
+            {selectedParentId
+              ? "View your organized family hierarchy. Click the edit button on any person to update their information."
+              : "Choose a parent to explore their family ancestry and lineage."
+            }
           </p>
         </div>
-        <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-          <DialogTrigger asChild>
-            <Button>Add Relative</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Relative</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-3">
-              <div>
-                <Label>Name</Label>
-                <Input
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        <div className="flex gap-2">
+          {selectedParentId && (
+            <Button
+              variant="outline"
+              onClick={() => setSelectedParentId(null)}
+            >
+              Change Parent
+            </Button>
+          )}
+          <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+            <DialogTrigger asChild>
+              <Button>Add Relative</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Relative</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-3">
                 <div>
-                  <Label>Relation</Label>
-                  <Select
-                    value={addRelation}
-                    onValueChange={(v) => setAddRelation(v as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select relation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RELATIONS.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Name</Label>
+                  <Input
+                    value={addName}
+                    onChange={(e) => setAddName(e.target.value)}
+                  />
                 </div>
-                {members.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Link To</Label>
-                    <Select value={addLinkTo} onValueChange={setAddLinkTo}>
+                    <Label>Relation</Label>
+                    <Select
+                      value={addRelation}
+                      onValueChange={(v) => setAddRelation(v as any)}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select person" />
+                        <SelectValue placeholder="Select relation" />
                       </SelectTrigger>
                       <SelectContent>
-                        {members.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.fullName}
+                        {RELATIONS.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {r}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                ) : (
-                  <div>
-                    <Label>First person</Label>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      This will create your first person in the tree. You can
-                      link relatives later.
+                  {members.length > 0 ? (
+                    <div>
+                      <Label>Link To</Label>
+                      <Select value={addLinkTo} onValueChange={setAddLinkTo}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select person" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {members.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.fullName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  ) : (
+                    <div>
+                      <Label>First person</Label>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        This will create your first person in the tree. You can
+                        link relatives later.
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {addRelation === "other" && (
+                  <div>
+                    <Label>Custom Relation</Label>
+                    <Input
+                      value={addCustomRelation}
+                      onChange={(e) => setAddCustomRelation(e.target.value)}
+                      placeholder="e.g., great-grandmother"
+                    />
                   </div>
                 )}
-              </div>
-              {addRelation === "other" && (
-                <div>
-                  <Label>Custom Relation</Label>
-                  <Input
-                    value={addCustomRelation}
-                    onChange={(e) => setAddCustomRelation(e.target.value)}
-                    placeholder="e.g., great-grandmother"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Birth Place (optional)</Label>
+                    <Input
+                      value={addBirthPlace}
+                      onChange={(e) => setAddBirthPlace(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Photo URL (optional)</Label>
+                    <Input
+                      value={addPhotoUrl}
+                      onChange={(e) => setAddPhotoUrl(e.target.value)}
+                    />
+                  </div>
                 </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Birth Place (optional)</Label>
-                  <Input
-                    value={addBirthPlace}
-                    onChange={(e) => setAddBirthPlace(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Photo URL (optional)</Label>
-                  <Input
-                    value={addPhotoUrl}
-                    onChange={(e) => setAddPhotoUrl(e.target.value)}
-                  />
+                <div className="flex justify-end">
+                  <Button onClick={saveAddRelative}>Save Relative</Button>
                 </div>
               </div>
-              <div className="flex justify-end">
-                <Button onClick={saveAddRelative}>Save Relative</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {!treeStructure ? (
+      {!selectedParentId ? (
+        <ParentSelection />
+      ) : !treeStructure ? (
         <Card>
           <CardContent className="text-center py-12">
             <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Family Tree Yet</h3>
+            <h3 className="text-lg font-medium mb-2">No Ancestry Data</h3>
             <p className="text-muted-foreground mb-6">
-              Start building your family tree by adding your first relative.
+              This parent doesn't have ancestry information yet. Add grandparents and ancestors to build their family tree.
             </p>
-            <Button onClick={() => setOpenAdd(true)}>Add First Person</Button>
+            <Button onClick={() => setOpenAdd(true)}>Add Ancestor</Button>
           </CardContent>
         </Card>
       ) : (
         <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-xl text-primary text-center">
+              {(() => {
+                const selectedParent = members.find(m => m.id === selectedParentId);
+                return selectedParent ? `${selectedParent.fullName}'s Family Tree` : 'Family Tree';
+              })()}
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-8">
             <div className="flex justify-center">
               <div className="max-w-6xl w-full overflow-x-auto">
