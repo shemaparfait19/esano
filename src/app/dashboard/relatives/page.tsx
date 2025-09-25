@@ -19,6 +19,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { Users, UserPlus, Crown, Heart, Baby } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import Link from 'next/link';
 
 interface FamilyHead {
   id: string;
@@ -63,21 +64,109 @@ export default function RelativesPage() {
 
   // Load family data from Firestore
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const familyDocRef = doc(db, 'familyData', user.uid);
 
     const unsubscribe = onSnapshot(familyDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setFamilyHeads(data.familyHeads || []);
-        setFamilyMembers(data.familyMembers || []);
+      try {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setFamilyHeads(data.familyHeads || []);
+          setFamilyMembers(data.familyMembers || []);
+        } else {
+          // Document doesn't exist yet, initialize empty arrays
+          setFamilyHeads([]);
+          setFamilyMembers([]);
+        }
+      } catch (error) {
+        console.error('Error loading family data:', error);
+        setFamilyHeads([]);
+        setFamilyMembers([]);
+      } finally {
+        setLoading(false);
       }
+    }, (error) => {
+      console.error('Error in family data snapshot:', error);
+      setFamilyHeads([]);
+      setFamilyMembers([]);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [user]);
+
+  // Convert family data to family tree format and sync
+  const syncToFamilyTree = async (heads: FamilyHead[], members: FamilyMember[]) => {
+    if (!user) return;
+
+    try {
+      // Convert family heads and members to family tree format
+      const treeMembers: any[] = [];
+      const treeEdges: any[] = [];
+
+      // Add family heads as tree members
+      heads.forEach(head => {
+        treeMembers.push({
+          id: head.id,
+          fullName: head.name,
+          birthPlace: undefined, // Could be enhanced later
+          photoUrl: undefined,
+        });
+      });
+
+      // Add family members and create edges
+      members.forEach(member => {
+        treeMembers.push({
+          id: member.id,
+          fullName: member.name,
+          birthPlace: member.birthPlace,
+          photoUrl: undefined,
+        });
+
+        // Create edge based on relationship
+        const head = heads.find(h => h.id === member.connectedTo);
+        if (head) {
+          // Determine edge direction based on relationship
+          const isParentRelation = ['father', 'mother', 'parent', 'grandfather', 'grandmother'].some(rel =>
+            member.relationship.toLowerCase().includes(rel) || head.relationship.toLowerCase().includes(rel)
+          );
+
+          if (isParentRelation) {
+            // Parent -> Child relationship
+            treeEdges.push({
+              fromId: head.id,
+              toId: member.id,
+              relation: 'parent',
+            });
+          } else {
+            // Other relationships (spouse, sibling, etc.)
+            treeEdges.push({
+              fromId: head.id,
+              toId: member.id,
+              relation: member.relationship.toLowerCase() as any,
+            });
+          }
+        }
+      });
+
+      // Save to family tree collection
+      await setDoc(doc(db, 'familyTrees', user.uid), {
+        ownerUserId: user.uid,
+        members: treeMembers,
+        edges: treeEdges,
+        updatedAt: new Date().toISOString(),
+      });
+
+      console.log('Family tree synced with relatives data');
+    } catch (error) {
+      console.error('Error syncing to family tree:', error);
+      // Don't show error toast here as it's a background sync
+    }
+  };
 
   // Save family data to Firestore
   const saveFamilyData = async (heads: FamilyHead[], members: FamilyMember[]) => {
@@ -89,6 +178,9 @@ export default function RelativesPage() {
         familyMembers: members,
         updatedAt: new Date().toISOString(),
       });
+
+      // Sync to family tree
+      await syncToFamilyTree(heads, members);
     } catch (error) {
       console.error('Error saving family data:', error);
       toast({
@@ -424,28 +516,57 @@ export default function RelativesPage() {
         </Card>
       )}
 
-      {/* Empty State */}
+      {/* Empty State - First Time Setup */}
       {familyHeads.length === 0 && (
-        <Card className="text-center">
-          <CardHeader>
-            <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-            <CardTitle className="font-headline text-2xl text-primary mt-4">
-              Start Building Your Family Tree
-            </CardTitle>
-            <CardDescription>
-              Begin by adding your father or grandfather as the head of the family.
-              Then connect all other relatives to these family heads.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => setOpenAddHead(true)}>
-              <Crown className="h-4 w-4 mr-2" />
-              Add First Family Head
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* DNA Analysis Option */}
+          <Link href="/dashboard/dna-analysis">
+            <Card className="text-center hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <div className="mx-auto bg-blue-100 p-3 rounded-full w-fit">
+                  <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <CardTitle className="font-headline text-xl text-primary mt-4">
+                  Upload DNA Data
+                </CardTitle>
+                <CardDescription>
+                  Upload your DNA file to automatically find and connect with relatives in our database.
+                  This uses genetic analysis to discover family connections.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">
+                  Go to DNA Analysis
+                </Button>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Manual Family Input Option */}
+          <Card className="text-center hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="mx-auto bg-green-100 p-3 rounded-full w-fit">
+                <Users className="h-8 w-8 text-green-600" />
+              </div>
+              <CardTitle className="font-headline text-xl text-primary mt-4">
+                Add Family Members Manually
+              </CardTitle>
+              <CardDescription>
+                Build your family tree manually by adding relatives and their relationships.
+                Start with family heads (fathers) and connect all relatives to them.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => setOpenAddHead(true)}>
+                <Crown className="h-4 w-4 mr-2" />
+                Start Adding Family
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

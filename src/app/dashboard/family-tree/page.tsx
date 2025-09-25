@@ -26,11 +26,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil, User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail } from "lucide-react";
+import Link from "next/link";
 
 function sanitize<T>(value: T): T {
   if (Array.isArray(value)) return value.map((v) => sanitize(v)) as any;
@@ -83,33 +82,6 @@ export default function FamilyTreePage() {
   const [tree, setTree] = useState<FamilyTree | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Add Relative Modal
-  const [openAdd, setOpenAdd] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addBirthPlace, setAddBirthPlace] = useState("");
-  const [addPhotoUrl, setAddPhotoUrl] = useState("");
-  const [addRelation, setAddRelation] = useState<
-    | FamilyRelation
-    | "father"
-    | "mother"
-    | "aunt"
-    | "uncle"
-    | "niece"
-    | "nephew"
-    | "step-parent"
-    | "step-child"
-    | "guardian"
-    | "other"
-  >("child");
-  const [addCustomRelation, setAddCustomRelation] = useState("");
-  const [addLinkTo, setAddLinkTo] = useState<string>("");
-
-  // Edit Member Modal
-  const [openEdit, setOpenEdit] = useState(false);
-  const [editMember, setEditMember] = useState<FamilyTreeMember | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editBirthPlace, setEditBirthPlace] = useState("");
-  const [editPhotoUrl, setEditPhotoUrl] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -253,91 +225,6 @@ export default function FamilyTreePage() {
     }
   }
 
-  // Modal handlers
-  function openEditMember(member: FamilyTreeMember) {
-    setEditMember(member);
-    setEditName(member.fullName);
-    setEditBirthPlace(member.birthPlace ?? "");
-    setEditPhotoUrl(member.photoUrl ?? "");
-    setOpenEdit(true);
-  }
-
-  async function saveAddRelative() {
-    if (!user || !tree || !addName.trim()) return;
-    const baseMember: FamilyTreeMember = {
-      id: uuidv4(),
-      fullName: addName.trim(),
-      birthPlace: addBirthPlace || undefined,
-      photoUrl: addPhotoUrl || undefined,
-    };
-
-    const relType: string =
-      addRelation === "other" ? addCustomRelation || "relative" : addRelation;
-    const toParent = ["father", "mother", "parent"].includes(relType);
-
-    let next: FamilyTree;
-    if (addLinkTo && members.length > 0) {
-      const edge: FamilyTreeEdge = {
-        fromId: toParent ? baseMember.id : addLinkTo,
-        toId: toParent ? addLinkTo : baseMember.id,
-        relation: toParent ? "parent" : (relType as FamilyRelation),
-      };
-      next = {
-        ...tree,
-        members: [...tree.members, baseMember],
-        edges: [...tree.edges, edge],
-        updatedAt: new Date().toISOString(),
-      };
-    } else {
-      // First person: just create the member without an edge
-      next = {
-        ...tree,
-        members: [...tree.members, baseMember],
-        updatedAt: new Date().toISOString(),
-      };
-    }
-
-    setOpenAdd(false);
-    setAddName("");
-    setAddBirthPlace("");
-    setAddPhotoUrl("");
-    setAddCustomRelation("");
-    setTree(next);
-    await persistTree(next);
-  }
-
-  async function saveEditMember() {
-    if (!tree || !editMember) return;
-    const nextMembers = tree.members.map((m) =>
-      m.id === editMember.id
-        ? {
-            ...m,
-            fullName: editName.trim() || m.fullName,
-            birthPlace: editBirthPlace || undefined,
-            photoUrl: editPhotoUrl || undefined,
-          }
-        : m
-    );
-    const next = { ...tree, members: nextMembers };
-    setOpenEdit(false);
-    setTree(next);
-    await persistTree(next);
-  }
-
-  async function deleteMember(id: string) {
-    if (!tree) return;
-    const nextMembers = tree.members.filter((m) => m.id !== id);
-    const nextEdges = tree.edges.filter(
-      (e) => e.fromId !== id && e.toId !== id
-    );
-    const next = {
-      ...tree,
-      members: nextMembers,
-      edges: nextEdges,
-    };
-    setTree(next);
-    await persistTree(next);
-  }
 
   if (loading) {
     return (
@@ -373,99 +260,9 @@ export default function FamilyTreePage() {
             View your nuclear family. Click on any family member to see their detailed profile.
           </p>
         </div>
-        <Dialog open={openAdd} onOpenChange={setOpenAdd}>
-          <DialogTrigger asChild>
-            <Button>Add Relative</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Relative</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-3">
-              <div>
-                <Label>Name</Label>
-                <Input
-                  value={addName}
-                  onChange={(e) => setAddName(e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Relation</Label>
-                  <Select
-                    value={addRelation}
-                    onValueChange={(v) => setAddRelation(v as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select relation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RELATIONS.map((r) => (
-                        <SelectItem key={r} value={r}>
-                          {r}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {members.length > 0 ? (
-                  <div>
-                    <Label>Link To</Label>
-                    <Select value={addLinkTo} onValueChange={setAddLinkTo}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select person" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {members.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.fullName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div>
-                    <Label>First person</Label>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      This will create your first person in the tree. You can
-                      link relatives later.
-                    </div>
-                  </div>
-                )}
-              </div>
-              {addRelation === "other" && (
-                <div>
-                  <Label>Custom Relation</Label>
-                  <Input
-                    value={addCustomRelation}
-                    onChange={(e) => setAddCustomRelation(e.target.value)}
-                    placeholder="e.g., great-grandmother"
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Birth Place (optional)</Label>
-                  <Input
-                    value={addBirthPlace}
-                    onChange={(e) => setAddBirthPlace(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Photo URL (optional)</Label>
-                  <Input
-                    value={addPhotoUrl}
-                    onChange={(e) => setAddPhotoUrl(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={saveAddRelative}>Save Relative</Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Link href="/dashboard/relatives">
+          <Button>Add Relative</Button>
+        </Link>
       </div>
 
       {!nuclearFamily ? (
@@ -474,9 +271,11 @@ export default function FamilyTreePage() {
             <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No Family Data</h3>
             <p className="text-muted-foreground mb-6">
-              Start building your family tree by adding your parents and siblings.
+              Add detailed family information in the Relatives section. Your family tree will display here once you have relatives added.
             </p>
-            <Button onClick={() => setOpenAdd(true)}>Add Family Member</Button>
+            <Link href="/dashboard/relatives">
+              <Button>Add Family Information</Button>
+            </Link>
           </CardContent>
         </Card>
       ) : (
@@ -693,44 +492,6 @@ export default function FamilyTreePage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Person</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Birth Place</Label>
-                <Input
-                  value={editBirthPlace}
-                  onChange={(e) => setEditBirthPlace(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Photo URL</Label>
-                <Input
-                  value={editPhotoUrl}
-                  onChange={(e) => setEditPhotoUrl(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpenEdit(false)}>
-                Cancel
-              </Button>
-              <Button onClick={saveEditMember}>Save</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
