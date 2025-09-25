@@ -57,8 +57,11 @@ export interface FamilyTreeMember {
   notes?: string;
   photoUrl?: string;
   photos?: string[];
+  audioUrls?: string[]; // recorded voice notes
+  mediaUrls?: string[]; // documents/videos
   tags?: string[];
   isDeceased?: boolean;
+  visibility?: "public" | "relatives" | "private";
   externalIds?: Record<string, string>; // e.g., ancestry/myheritage ids
   // Canvas coordinates for interactive board rendering
   x?: number; // px
