@@ -36,6 +36,14 @@ const schema = z.object({
   birthPlace: z.string().optional(),
   clanOrCulturalInfo: z.string().optional(),
   relativesNames: z.string().optional(), // comma separated
+  nid: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  socialMedias: z.string().optional(),
+  location: z.string().optional(),
+  maritalStatus: z.string().optional(),
+  spouseName: z.string().optional(),
+  education: z.string().optional(),
+  work: z.string().optional(),
 });
 
 export default function ProfileSetupPage() {
@@ -60,6 +68,14 @@ export default function ProfileSetupPage() {
       birthPlace: userProfile?.birthPlace ?? "",
       clanOrCulturalInfo: userProfile?.clanOrCulturalInfo ?? "",
       relativesNames: (userProfile?.relativesNames ?? []).join(", "),
+      nid: userProfile?.nid ?? "",
+      phoneNumber: userProfile?.phoneNumber ?? "",
+      socialMedias: userProfile?.socialMedias ?? "",
+      location: userProfile?.location ?? "",
+      maritalStatus: userProfile?.maritalStatus ?? "",
+      spouseName: userProfile?.spouseName ?? "",
+      education: userProfile?.education ?? "",
+      work: userProfile?.work ?? "",
     },
   });
 
@@ -80,6 +96,14 @@ export default function ProfileSetupPage() {
           birthPlace: values.birthPlace || undefined,
           clanOrCulturalInfo: values.clanOrCulturalInfo || undefined,
           relativesNames: relatives,
+          nid: values.nid || undefined,
+          phoneNumber: values.phoneNumber || undefined,
+          socialMedias: values.socialMedias || undefined,
+          location: values.location || undefined,
+          maritalStatus: values.maritalStatus || undefined,
+          spouseName: values.spouseName || undefined,
+          education: values.education || undefined,
+          work: values.work || undefined,
           profileCompleted: true,
           updatedAt: nowIso,
         },
@@ -185,6 +209,119 @@ export default function ProfileSetupPage() {
                     <FormControl>
                       <Input
                         placeholder="e.g., John Doe, Mary Doe, ..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="nid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>National ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your National ID" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+1234567890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="socialMedias"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Social Media Links</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="e.g., Facebook: url, Twitter: url"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Current Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City, Country" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="maritalStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marital Status</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Single, Married, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="spouseName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Spouse Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Spouse's full name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="education"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Education Information</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Degrees, schools, etc."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="work"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Work/Job Information</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Occupation, company, etc."
                         {...field}
                       />
                     </FormControl>
