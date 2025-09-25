@@ -120,55 +120,49 @@ export default function FamilyTreePage() {
   }
 
 
-  // Build nuclear family structure
-  const buildNuclearFamily = () => {
+  // Organize family members by relationship to current user
+  const organizeFamilyHierarchy = () => {
     if (members.length === 0) return null;
 
-    const memberMap = new Map(members.map(m => [m.id, m]));
-    const parentChildMap = new Map<string, string[]>();
-    const spouseMap = new Map<string, string>();
+    const parents: FamilyTreeMember[] = [];
+    const siblings: FamilyTreeMember[] = [];
+    const otherRelatives: { [key: string]: FamilyTreeMember[] } = {};
 
-    // Build relationship maps
+    // Since we're now syncing from relatives data, we can access the relationshipToUser
+    // For now, we'll use the edge relations which are mapped from relationshipToUser
     edges.forEach(edge => {
+      const member = members.find(m => m.id === edge.toId);
+      if (!member) return;
+
+      // Check relationship type - use the actual relation values from the type
       if (edge.relation === 'parent') {
-        const parentId = edge.fromId;
-        const childId = edge.toId;
-        if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, []);
-        parentChildMap.get(parentId)!.push(childId);
-      } else if (edge.relation === 'child') {
-        const parentId = edge.toId;
-        const childId = edge.fromId;
-        if (!parentChildMap.has(parentId)) parentChildMap.set(parentId, []);
-        parentChildMap.get(parentId)!.push(childId);
-      } else if (edge.relation === 'spouse') {
-        spouseMap.set(edge.fromId, edge.toId);
-        spouseMap.set(edge.toId, edge.fromId);
+        if (!parents.find(p => p.id === member.id)) {
+          parents.push(member);
+        }
+      } else if (edge.relation === 'sibling') {
+        if (!siblings.find(s => s.id === member.id)) {
+          siblings.push(member);
+        }
+      } else {
+        // Other relationships (spouse, grandparent, grandchild, cousin)
+        const relationKey = edge.relation;
+        if (!otherRelatives[relationKey]) {
+          otherRelatives[relationKey] = [];
+        }
+        if (!otherRelatives[relationKey].find(r => r.id === member.id)) {
+          otherRelatives[relationKey].push(member);
+        }
       }
     });
 
-    // Find parents (people who have children)
-    const parents = Array.from(parentChildMap.keys()).map(id => memberMap.get(id)).filter(Boolean);
-
-    if (parents.length === 0) return null;
-
-    // Get all children
-    const allChildren = new Set<string>();
-    parents.forEach(parent => {
-      const children = parentChildMap.get(parent!.id) || [];
-      children.forEach(childId => allChildren.add(childId));
-    });
-
-    const children = Array.from(allChildren).map(id => memberMap.get(id)).filter(Boolean);
-
     return {
-      parents: parents as FamilyTreeMember[],
-      children: children as FamilyTreeMember[],
-      spouseMap,
-      parentChildMap,
+      parents,
+      siblings,
+      otherRelatives,
     };
   };
 
-  const nuclearFamily = buildNuclearFamily();
+  const familyHierarchy = organizeFamilyHierarchy();
 
   // Profile View Modal
   const [viewingProfile, setViewingProfile] = useState<FamilyTreeMember | null>(null);
@@ -181,18 +175,15 @@ export default function FamilyTreePage() {
 
   // Family Member Card Component
   const FamilyMemberCard = ({ member, label, isParent = false }: { member: FamilyTreeMember; label?: string; isParent?: boolean }) => (
-    <div className="flex flex-col items-center space-y-2">
-      <div
-        className={`relative cursor-pointer hover:scale-105 transition-transform ${isParent ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-        onClick={() => openProfileView(member)}
-      >
+    <div className="flex flex-col items-center space-y-2 p-4 border rounded-lg hover:shadow-md transition-shadow cursor-pointer" onClick={() => openProfileView(member)}>
+      <div className="relative">
         <img
           src={member.photoUrl || `https://picsum.photos/seed/${member.id}/80`}
           alt={member.fullName}
           className={`rounded-full object-cover border-2 shadow-md ${isParent ? 'w-20 h-20 border-primary' : 'w-16 h-16 border-muted'}`}
         />
         {label && (
-          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-medium">
+          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">
             {label}
           </div>
         )}
@@ -265,7 +256,7 @@ export default function FamilyTreePage() {
         </Link>
       </div>
 
-      {!nuclearFamily ? (
+      {!familyHierarchy || (familyHierarchy.parents.length === 0 && familyHierarchy.siblings.length === 0 && Object.keys(familyHierarchy.otherRelatives).length === 0) ? (
         <Card>
           <CardContent className="text-center py-12">
             <User className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -279,66 +270,92 @@ export default function FamilyTreePage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline text-xl text-primary text-center">
-              My Family
-            </CardTitle>
-            <CardDescription className="text-center">
-              Click on any family member to view their detailed profile
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8">
-            <div className="flex flex-col items-center space-y-8">
-              {/* Parents Section */}
-              <div className="bg-muted/50 rounded-lg p-6 w-full max-w-2xl">
-                <h3 className="text-lg font-medium text-center mb-6 text-primary">Parents</h3>
-                <div className="flex justify-center items-center space-x-12">
-                  {nuclearFamily.parents.map((parent, index) => {
-                    // Determine if this is mother or father based on relationships
-                    const spouseId = nuclearFamily.spouseMap.get(parent.id);
-                    const isFemale = parent.fullName.toLowerCase().includes('mother') ||
-                                   parent.fullName.toLowerCase().includes('mom') ||
-                                   (spouseId && members.find(m => m.id === spouseId)?.fullName.toLowerCase().includes('father'));
-
-                    return (
-                      <FamilyMemberCard
-                        key={parent.id}
-                        member={parent}
-                        label={isFemale ? "Mother" : "Father"}
-                        isParent={true}
-                      />
-                    );
-                  })}
+        <div className="space-y-8">
+          {/* Parents Section */}
+          {familyHierarchy.parents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline text-xl text-primary flex items-center gap-2">
+                  <Crown className="h-5 w-5" />
+                  Parents
+                </CardTitle>
+                <CardDescription>
+                  Your direct parents and guardians
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {familyHierarchy.parents.map((parent) => (
+                    <FamilyMemberCard
+                      key={parent.id}
+                      member={parent}
+                      label="Parent"
+                      isParent={true}
+                    />
+                  ))}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Connection Line */}
-              {nuclearFamily.children.length > 0 && (
-                <div className="flex flex-col items-center">
-                  <div className="w-px h-8 bg-border"></div>
-                  <Heart className="h-6 w-6 text-red-500 mb-2" />
-                  <div className="w-px h-8 bg-border"></div>
+          {/* Siblings Section */}
+          {familyHierarchy.siblings.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline text-xl text-primary flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Siblings
+                </CardTitle>
+                <CardDescription>
+                  Your brothers and sisters
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {familyHierarchy.siblings.map((sibling) => (
+                    <FamilyMemberCard
+                      key={sibling.id}
+                      member={sibling}
+                      label="Sibling"
+                    />
+                  ))}
                 </div>
-              )}
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Children Section */}
-              {nuclearFamily.children.length > 0 && (
-                <div className="w-full max-w-4xl">
-                  <h3 className="text-lg font-medium text-center mb-6 text-primary">Children & Siblings</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
-                    {nuclearFamily.children.map((child) => (
+          {/* Other Relatives Sections */}
+          {Object.entries(familyHierarchy.otherRelatives).map(([relation, relatives]) => (
+            relatives.length > 0 && (
+              <Card key={relation}>
+                <CardHeader>
+                  <CardTitle className="font-headline text-xl text-primary flex items-center gap-2 capitalize">
+                    {relation === 'spouse' && <Heart className="h-5 w-5" />}
+                    {relation === 'grandparent' && <Crown className="h-5 w-5" />}
+                    {relation === 'grandchild' && <Baby className="h-5 w-5" />}
+                    {relation === 'cousin' && <Users className="h-5 w-5" />}
+                    {relation.replace('-', ' ')}
+                  </CardTitle>
+                  <CardDescription>
+                    Your {relation.replace('-', ' ')}
+                    {relatives.length > 1 ? 's' : ''}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {relatives.map((relative) => (
                       <FamilyMemberCard
-                        key={child.id}
-                        member={child}
+                        key={relative.id}
+                        member={relative}
+                        label={relation.replace('-', ' ')}
                       />
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            )
+          ))}
+        </div>
       )}
 
       {/* Profile View Modal */}
@@ -413,7 +430,7 @@ export default function FamilyTreePage() {
               </div>
 
               {/* Family Information */}
-              {nuclearFamily && (
+              {familyHierarchy && (
                 <div className="space-y-3">
                   <h4 className="font-medium text-primary flex items-center gap-2">
                     <Heart className="h-4 w-4" />
@@ -421,69 +438,48 @@ export default function FamilyTreePage() {
                   </h4>
                   <div className="pl-6 space-y-2">
                     {/* Parents */}
-                    {nuclearFamily.parents.some(p => nuclearFamily.parentChildMap.get(p.id)?.includes(viewingProfile.id)) && (
+                    {familyHierarchy.parents.length > 0 && (
                       <div>
                         <span className="text-sm font-medium">Parents:</span>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {nuclearFamily.parents
-                            .filter(p => nuclearFamily.parentChildMap.get(p.id)?.includes(viewingProfile.id))
-                            .map(parent => (
-                              <span key={parent.id} className="text-sm bg-muted px-2 py-1 rounded">
-                                {parent.fullName}
-                              </span>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Spouse */}
-                    {nuclearFamily.spouseMap.has(viewingProfile.id) && (
-                      <div>
-                        <span className="text-sm font-medium">Spouse:</span>
-                        <span className="text-sm bg-muted px-2 py-1 rounded ml-2">
-                          {members.find(m => m.id === nuclearFamily.spouseMap.get(viewingProfile.id))?.fullName}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Children */}
-                    {nuclearFamily.parentChildMap.has(viewingProfile.id) && (
-                      <div>
-                        <span className="text-sm font-medium">Children:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {nuclearFamily.parentChildMap.get(viewingProfile.id)?.map(childId => {
-                            const child = members.find(m => m.id === childId);
-                            return child ? (
-                              <span key={child.id} className="text-sm bg-muted px-2 py-1 rounded">
-                                {child.fullName}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Siblings */}
-                    {nuclearFamily.parents.some(p => {
-                      const siblings = nuclearFamily.parentChildMap.get(p.id) || [];
-                      return siblings.includes(viewingProfile.id) && siblings.length > 1;
-                    }) && (
-                      <div>
-                        <span className="text-sm font-medium">Siblings:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {nuclearFamily.parents.flatMap(p =>
-                            (nuclearFamily.parentChildMap.get(p.id) || [])
-                              .filter(childId => childId !== viewingProfile.id)
-                              .map(childId => members.find(m => m.id === childId))
-                              .filter(Boolean)
-                          ).map(sibling => (
-                            <span key={sibling!.id} className="text-sm bg-muted px-2 py-1 rounded">
-                              {sibling!.fullName}
+                          {familyHierarchy.parents.map(parent => (
+                            <span key={parent.id} className="text-sm bg-muted px-2 py-1 rounded">
+                              {parent.fullName}
                             </span>
                           ))}
                         </div>
                       </div>
                     )}
+
+                    {/* Siblings */}
+                    {familyHierarchy.siblings.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium">Siblings:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {familyHierarchy.siblings.map(sibling => (
+                            <span key={sibling.id} className="text-sm bg-muted px-2 py-1 rounded">
+                              {sibling.fullName}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Other Relationships */}
+                    {Object.entries(familyHierarchy.otherRelatives).map(([relation, relatives]) => (
+                      relatives.length > 0 && (
+                        <div key={relation}>
+                          <span className="text-sm font-medium capitalize">{relation.replace('-', ' ')}:</span>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {relatives.map(relative => (
+                              <span key={relative.id} className="text-sm bg-muted px-2 py-1 rounded">
+                                {relative.fullName}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    ))}
                   </div>
                 </div>
               )}

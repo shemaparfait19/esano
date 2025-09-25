@@ -31,6 +31,7 @@ interface FamilyMember {
   id: string;
   name: string;
   relationship: string;
+  relationshipToUser: string; // Direct relationship to current user
   connectedTo: string; // ID of the family head
   birthPlace?: string;
   birthDate?: string;
@@ -57,6 +58,7 @@ export default function RelativesPage() {
   // Form states for adding family member
   const [memberName, setMemberName] = useState('');
   const [memberRelationship, setMemberRelationship] = useState('');
+  const [memberRelationshipToUser, setMemberRelationshipToUser] = useState('');
   const [connectedToHead, setConnectedToHead] = useState('');
   const [memberBirthPlace, setMemberBirthPlace] = useState('');
   const [memberBirthDate, setMemberBirthDate] = useState('');
@@ -113,7 +115,7 @@ export default function RelativesPage() {
         treeMembers.push({
           id: head.id,
           fullName: head.name,
-          birthPlace: undefined, // Could be enhanced later
+          birthPlace: undefined,
           photoUrl: undefined,
         });
       });
@@ -127,29 +129,31 @@ export default function RelativesPage() {
           photoUrl: undefined,
         });
 
-        // Create edge based on relationship
+        // Create edge based on relationship to user
         const head = heads.find(h => h.id === member.connectedTo);
         if (head) {
-          // Determine edge direction based on relationship
-          const isParentRelation = ['father', 'mother', 'parent', 'grandfather', 'grandmother'].some(rel =>
-            member.relationship.toLowerCase().includes(rel) || head.relationship.toLowerCase().includes(rel)
-          );
+          // Map relationship to user to appropriate edge type
+          let edgeRelation: string = 'cousin'; // default
 
-          if (isParentRelation) {
-            // Parent -> Child relationship
-            treeEdges.push({
-              fromId: head.id,
-              toId: member.id,
-              relation: 'parent',
-            });
-          } else {
-            // Other relationships (spouse, sibling, etc.)
-            treeEdges.push({
-              fromId: head.id,
-              toId: member.id,
-              relation: member.relationship.toLowerCase() as any,
-            });
+          const relationship = member.relationshipToUser.toLowerCase();
+
+          if (relationship.includes('father') || relationship.includes('mother') || relationship.includes('parent')) {
+            edgeRelation = 'parent';
+          } else if (relationship.includes('brother') || relationship.includes('sister') || relationship.includes('sibling')) {
+            edgeRelation = 'sibling';
+          } else if (relationship.includes('grandfather') || relationship.includes('grandmother') || relationship.includes('grandparent')) {
+            edgeRelation = 'grandparent';
+          } else if (relationship.includes('uncle') || relationship.includes('aunt')) {
+            edgeRelation = 'cousin'; // Simplified for now
+          } else if (relationship.includes('cousin')) {
+            edgeRelation = 'cousin';
           }
+
+          treeEdges.push({
+            fromId: head.id,
+            toId: member.id,
+            relation: edgeRelation,
+          });
         }
       });
 
@@ -218,12 +222,13 @@ export default function RelativesPage() {
 
   // Add family member
   const addFamilyMember = async () => {
-    if (!memberName.trim() || !memberRelationship.trim() || !connectedToHead) return;
+    if (!memberName.trim() || !memberRelationship.trim() || !memberRelationshipToUser.trim() || !connectedToHead) return;
 
     const newMember: FamilyMember = {
       id: uuidv4(),
       name: memberName.trim(),
       relationship: memberRelationship.trim(),
+      relationshipToUser: memberRelationshipToUser.trim(),
       connectedTo: connectedToHead,
       birthPlace: memberBirthPlace.trim() || undefined,
       birthDate: memberBirthDate || undefined,
@@ -237,6 +242,7 @@ export default function RelativesPage() {
     // Reset form
     setMemberName('');
     setMemberRelationship('');
+    setMemberRelationshipToUser('');
     setConnectedToHead('');
     setMemberBirthPlace('');
     setMemberBirthDate('');
@@ -372,12 +378,64 @@ export default function RelativesPage() {
                     </Select>
                   </div>
                   <div>
+                    <Label>Relationship to You</Label>
+                    <Select value={memberRelationshipToUser} onValueChange={setMemberRelationshipToUser}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select relationship to you" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mother">Mother</SelectItem>
+                        <SelectItem value="father">Father</SelectItem>
+                        <SelectItem value="brother">Brother</SelectItem>
+                        <SelectItem value="sister">Sister</SelectItem>
+                        <SelectItem value="grandmother">Grandmother</SelectItem>
+                        <SelectItem value="grandfather">Grandfather</SelectItem>
+                        <SelectItem value="uncle">Uncle</SelectItem>
+                        <SelectItem value="aunt">Aunt</SelectItem>
+                        <SelectItem value="cousin">Cousin</SelectItem>
+                        <SelectItem value="nephew">Nephew</SelectItem>
+                        <SelectItem value="niece">Niece</SelectItem>
+                        <SelectItem value="step-mother">Step Mother</SelectItem>
+                        <SelectItem value="step-father">Step Father</SelectItem>
+                        <SelectItem value="step-brother">Step Brother</SelectItem>
+                        <SelectItem value="step-sister">Step Sister</SelectItem>
+                        <SelectItem value="guardian">Guardian</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
                     <Label>Relationship to Family Head</Label>
-                    <Input
-                      value={memberRelationship}
-                      onChange={(e) => setMemberRelationship(e.target.value)}
-                      placeholder="e.g., wife, son, daughter, brother, sister"
-                    />
+                    <Select value={memberRelationship} onValueChange={setMemberRelationship}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select relationship to family head" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="wife">Wife</SelectItem>
+                        <SelectItem value="husband">Husband</SelectItem>
+                        <SelectItem value="son">Son</SelectItem>
+                        <SelectItem value="daughter">Daughter</SelectItem>
+                        <SelectItem value="brother">Brother</SelectItem>
+                        <SelectItem value="sister">Sister</SelectItem>
+                        <SelectItem value="mother">Mother</SelectItem>
+                        <SelectItem value="father">Father</SelectItem>
+                        <SelectItem value="grandmother">Grandmother</SelectItem>
+                        <SelectItem value="grandfather">Grandfather</SelectItem>
+                        <SelectItem value="uncle">Uncle</SelectItem>
+                        <SelectItem value="aunt">Aunt</SelectItem>
+                        <SelectItem value="nephew">Nephew</SelectItem>
+                        <SelectItem value="niece">Niece</SelectItem>
+                        <SelectItem value="cousin">Cousin</SelectItem>
+                        <SelectItem value="step-mother">Step Mother</SelectItem>
+                        <SelectItem value="step-father">Step Father</SelectItem>
+                        <SelectItem value="step-son">Step Son</SelectItem>
+                        <SelectItem value="step-daughter">Step Daughter</SelectItem>
+                        <SelectItem value="step-brother">Step Brother</SelectItem>
+                        <SelectItem value="step-sister">Step Sister</SelectItem>
+                        <SelectItem value="guardian">Guardian</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -485,7 +543,7 @@ export default function RelativesPage() {
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium truncate">{member.name}</h4>
                                 <p className="text-sm text-muted-foreground capitalize">
-                                  {member.relationship}
+                                  {member.relationshipToUser}
                                 </p>
                                 {member.birthPlace && (
                                   <p className="text-xs text-muted-foreground mt-1">
