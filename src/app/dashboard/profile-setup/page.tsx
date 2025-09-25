@@ -317,7 +317,8 @@ export default function ProfileSetupPage() {
                 control={form.control}
                 name="work"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-2">
+
+<FormItem className="md:col-span-2">
                     <FormLabel>Work/Job Information</FormLabel>
                     <FormControl>
                       <Textarea
