@@ -67,19 +67,24 @@ export default function RelativesPage() {
   // Load family data from Firestore
   useEffect(() => {
     if (!user) {
+      console.log('No user found, setting loading to false');
       setLoading(false);
       return;
     }
 
+    console.log('Loading family data for user:', user.uid);
     const familyDocRef = doc(db, 'familyData', user.uid);
 
     const unsubscribe = onSnapshot(familyDocRef, (snapshot) => {
       try {
+        console.log('Received snapshot:', snapshot.exists());
         if (snapshot.exists()) {
           const data = snapshot.data();
+          console.log('Family data loaded:', data);
           setFamilyHeads(data.familyHeads || []);
           setFamilyMembers(data.familyMembers || []);
         } else {
+          console.log('No family data document exists yet');
           // Document doesn't exist yet, initialize empty arrays
           setFamilyHeads([]);
           setFamilyMembers([]);
@@ -174,22 +179,35 @@ export default function RelativesPage() {
 
   // Save family data to Firestore
   const saveFamilyData = async (heads: FamilyHead[], members: FamilyMember[]) => {
-    if (!user) return;
+    if (!user) {
+      console.error('No user found for saving family data');
+      return;
+    }
 
     try {
-      await setDoc(doc(db, 'familyData', user.uid), {
+      console.log('Saving family data for user:', user.uid);
+      console.log('Family heads:', heads);
+      console.log('Family members:', members);
+
+      const dataToSave = {
         familyHeads: heads,
         familyMembers: members,
         updatedAt: new Date().toISOString(),
-      });
+      };
+
+      console.log('Data to save:', dataToSave);
+
+      await setDoc(doc(db, 'familyData', user.uid), dataToSave);
+      console.log('Family data saved successfully');
 
       // Sync to family tree
       await syncToFamilyTree(heads, members);
+      console.log('Family tree sync completed');
     } catch (error) {
       console.error('Error saving family data:', error);
       toast({
         title: 'Save failed',
-        description: 'Failed to save family information',
+        description: `Failed to save family information: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive',
       });
     }
@@ -197,7 +215,12 @@ export default function RelativesPage() {
 
   // Add family head
   const addFamilyHead = async () => {
-    if (!headName.trim()) return;
+    if (!headName.trim()) {
+      console.log('Head name is empty, not adding');
+      return;
+    }
+
+    console.log('Adding family head:', headName, headRelationship);
 
     const newHead: FamilyHead = {
       id: uuidv4(),
@@ -206,6 +229,7 @@ export default function RelativesPage() {
     };
 
     const updatedHeads = [...familyHeads, newHead];
+    console.log('Updated heads:', updatedHeads);
     setFamilyHeads(updatedHeads);
     await saveFamilyData(updatedHeads, familyMembers);
 
@@ -222,7 +246,17 @@ export default function RelativesPage() {
 
   // Add family member
   const addFamilyMember = async () => {
-    if (!memberName.trim() || !memberRelationship.trim() || !memberRelationshipToUser.trim() || !connectedToHead) return;
+    if (!memberName.trim() || !memberRelationship.trim() || !memberRelationshipToUser.trim() || !connectedToHead) {
+      console.log('Missing required fields:', {
+        memberName: !!memberName.trim(),
+        memberRelationship: !!memberRelationship.trim(),
+        memberRelationshipToUser: !!memberRelationshipToUser.trim(),
+        connectedToHead: !!connectedToHead
+      });
+      return;
+    }
+
+    console.log('Adding family member:', memberName, memberRelationshipToUser, connectedToHead);
 
     const newMember: FamilyMember = {
       id: uuidv4(),
@@ -236,6 +270,7 @@ export default function RelativesPage() {
     };
 
     const updatedMembers = [...familyMembers, newMember];
+    console.log('Updated members:', updatedMembers);
     setFamilyMembers(updatedMembers);
     await saveFamilyData(familyHeads, updatedMembers);
 

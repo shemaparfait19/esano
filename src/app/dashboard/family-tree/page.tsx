@@ -271,7 +271,7 @@ export default function FamilyTreePage() {
         </Card>
       ) : (
         <div className="space-y-8">
-          {/* Parents Section */}
+          {/* Parents Section - Father and Mother side by side */}
           {familyHierarchy.parents.length > 0 && (
             <Card>
               <CardHeader>
@@ -284,15 +284,39 @@ export default function FamilyTreePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {familyHierarchy.parents.map((parent) => (
-                    <FamilyMemberCard
-                      key={parent.id}
-                      member={parent}
-                      label="Parent"
-                      isParent={true}
-                    />
-                  ))}
+                <div className="flex justify-center items-center gap-8">
+                  {(() => {
+                    // Find father and mother from family heads and parents
+                    const father = familyHierarchy.parents.find(p =>
+                      members.find(m => m.id === p.id)?.fullName?.toLowerCase().includes('father') ||
+                      p.fullName?.toLowerCase().includes('father')
+                    );
+                    const mother = familyHierarchy.parents.find(p =>
+                      members.find(m => m.id === p.id)?.fullName?.toLowerCase().includes('mother') ||
+                      p.fullName?.toLowerCase().includes('mother')
+                    );
+
+                    // If we can't determine father/mother by name, just show them in order
+                    const parentsToShow: { parent: FamilyTreeMember; label: string }[] = [];
+                    if (father) parentsToShow.push({ parent: father, label: "Father" });
+                    if (mother) parentsToShow.push({ parent: mother, label: "Mother" });
+
+                    // Add any remaining parents
+                    familyHierarchy.parents.forEach(parent => {
+                      if (!parentsToShow.find(p => p.parent.id === parent.id)) {
+                        parentsToShow.push({ parent, label: "Parent" });
+                      }
+                    });
+
+                    return parentsToShow.map(({ parent, label }) => (
+                      <FamilyMemberCard
+                        key={parent.id}
+                        member={parent}
+                        label={label}
+                        isParent={true}
+                      />
+                    ));
+                  })()}
                 </div>
               </CardContent>
             </Card>
