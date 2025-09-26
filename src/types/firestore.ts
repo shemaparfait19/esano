@@ -64,6 +64,8 @@ export interface FamilyTreeMember {
   visibility?: "public" | "relatives" | "private";
   externalIds?: Record<string, string>; // e.g., ancestry/myheritage ids
   relationshipToUser?: string; // Direct relationship to current user
+  connectedTo?: string; // ID of the family head this member is connected to
+  relationshipToHead?: string; // Relationship to the family head
   // Residence information
   residenceProvince?: string;
   residenceDistrict?: string;

@@ -618,7 +618,27 @@ export default function FamilyTreePage() {
               </Select>
             </div>
             <div>
-              <Label>Relationship Type</Label>
+              <Label>Connect To Family Head</Label>
+              <Select
+                value={editForm.connectedTo || ''}
+                onValueChange={(value) => setEditForm({ ...editForm, connectedTo: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select family head" />
+                </SelectTrigger>
+                <SelectContent>
+                  {members
+                    .filter(m => m.id !== editingMember?.id) // Exclude current member
+                    .map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.fullName} {member.relationshipToUser ? `(${member.relationshipToUser})` : ''}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Relationship to You</Label>
               <Select
                 value={editForm.relationshipToUser || ''}
                 onValueChange={(value) => setEditForm({ ...editForm, relationshipToUser: value })}
@@ -640,6 +660,42 @@ export default function FamilyTreePage() {
                   <SelectItem value="niece">Niece</SelectItem>
                   <SelectItem value="step-mother">Step Mother</SelectItem>
                   <SelectItem value="step-father">Step Father</SelectItem>
+                  <SelectItem value="step-brother">Step Brother</SelectItem>
+                  <SelectItem value="step-sister">Step Sister</SelectItem>
+                  <SelectItem value="guardian">Guardian</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Relationship to Family Head</Label>
+              <Select
+                value={editForm.relationshipToHead || ''}
+                onValueChange={(value) => setEditForm({ ...editForm, relationshipToHead: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relationship to family head" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wife">Wife</SelectItem>
+                  <SelectItem value="husband">Husband</SelectItem>
+                  <SelectItem value="son">Son</SelectItem>
+                  <SelectItem value="daughter">Daughter</SelectItem>
+                  <SelectItem value="brother">Brother</SelectItem>
+                  <SelectItem value="sister">Sister</SelectItem>
+                  <SelectItem value="mother">Mother</SelectItem>
+                  <SelectItem value="father">Father</SelectItem>
+                  <SelectItem value="grandmother">Grandmother</SelectItem>
+                  <SelectItem value="grandfather">Grandfather</SelectItem>
+                  <SelectItem value="uncle">Uncle</SelectItem>
+                  <SelectItem value="aunt">Aunt</SelectItem>
+                  <SelectItem value="nephew">Nephew</SelectItem>
+                  <SelectItem value="niece">Niece</SelectItem>
+                  <SelectItem value="cousin">Cousin</SelectItem>
+                  <SelectItem value="step-mother">Step Mother</SelectItem>
+                  <SelectItem value="step-father">Step Father</SelectItem>
+                  <SelectItem value="step-son">Step Son</SelectItem>
+                  <SelectItem value="step-daughter">Step Daughter</SelectItem>
                   <SelectItem value="step-brother">Step Brother</SelectItem>
                   <SelectItem value="step-sister">Step Sister</SelectItem>
                   <SelectItem value="guardian">Guardian</SelectItem>
