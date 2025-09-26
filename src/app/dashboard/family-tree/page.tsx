@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
@@ -27,8 +29,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail } from "lucide-react";
+import { Pencil, User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 function sanitize<T>(value: T): T {
@@ -168,6 +180,21 @@ export default function FamilyTreePage() {
   const [viewingProfile, setViewingProfile] = useState<FamilyTreeMember | null>(null);
   const [openProfile, setOpenProfile] = useState(false);
 
+  // Edit Modal
+  const [editingMember, setEditingMember] = useState<FamilyTreeMember | null>(null);
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<FamilyTreeMember>>({});
+
+  // Delete Confirmation
+  const [deletingMember, setDeletingMember] = useState<FamilyTreeMember | null>(null);
+  const [openDelete, setOpenDelete] = useState(false);
+
+  useEffect(() => {
+    if (editingMember) {
+      setEditForm({ ...editingMember });
+    }
+  }, [editingMember]);
+
   const openProfileView = (member: FamilyTreeMember) => {
     setViewingProfile(member);
     setOpenProfile(true);
@@ -195,6 +222,32 @@ export default function FamilyTreePage() {
         {member.birthPlace && (
           <div className="text-xs text-muted-foreground mt-1">{member.birthPlace}</div>
         )}
+      </div>
+      <div className="flex space-x-1 mt-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 w-6 p-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditingMember(member);
+            setOpenEdit(true);
+          }}
+        >
+          <Edit className="h-3 w-3" />
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeletingMember(member);
+            setOpenDelete(true);
+          }}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
     </div>
   );
@@ -511,6 +564,144 @@ export default function FamilyTreePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Member Modal */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Family Member</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  value={editForm.fullName || ''}
+                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="gender">Gender</Label>
+                <Select
+                  value={editForm.gender || ''}
+                  onValueChange={(value) => setEditForm({ ...editForm, gender: value as "male" | "female" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="birthDate">Birth Date</Label>
+                <Input
+                  id="birthDate"
+                  type="date"
+                  value={editForm.birthDate || ''}
+                  onChange={(e) => setEditForm({ ...editForm, birthDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="birthPlace">Birth Place</Label>
+                <Input
+                  id="birthPlace"
+                  value={editForm.birthPlace || ''}
+                  onChange={(e) => setEditForm({ ...editForm, birthPlace: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="occupation">Occupation</Label>
+              <Input
+                id="occupation"
+                value={editForm.occupation || ''}
+                onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={editForm.notes || ''}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setOpenEdit(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!editingMember || !editForm.fullName) return;
+                try {
+                  const response = await fetch('/api/family-tree', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      type: 'member',
+                      ownerUserId: user?.uid,
+                      member: { ...editingMember, ...editForm },
+                    }),
+                  });
+                  if (response.ok) {
+                    toast({ title: "Member updated successfully" });
+                    setOpenEdit(false);
+                  } else {
+                    toast({ title: "Failed to update member", variant: "destructive" });
+                  }
+                } catch (error) {
+                  toast({ title: "Error updating member", variant: "destructive" });
+                }
+              }}
+            >
+              Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={openDelete} onOpenChange={setOpenDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Family Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deletingMember?.fullName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deletingMember) return;
+                try {
+                  const response = await fetch(`/api/family-tree?ownerUserId=${user?.uid}&memberId=${deletingMember.id}`, {
+                    method: 'DELETE',
+                  });
+                  if (response.ok) {
+                    toast({ title: "Member deleted successfully" });
+                    setOpenDelete(false);
+                  } else {
+                    toast({ title: "Failed to delete member", variant: "destructive" });
+                  }
+                } catch (error) {
+                  toast({ title: "Error deleting member", variant: "destructive" });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
   );

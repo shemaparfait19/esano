@@ -391,3 +391,32 @@ export async function linkFamilyRelation(
   await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
   return updated;
 }
+
+export async function updateFamilyMember(
+  ownerUserId: string,
+  member: FamilyTreeMember
+): Promise<FamilyTree> {
+  const tree = await getFamilyTree(ownerUserId);
+  const updated: FamilyTree = {
+    ...tree,
+    members: tree.members.map((m) => (m.id === member.id ? member : m)),
+    updatedAt: new Date().toISOString(),
+  };
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  return updated;
+}
+
+export async function deleteFamilyMember(
+  ownerUserId: string,
+  memberId: string
+): Promise<FamilyTree> {
+  const tree = await getFamilyTree(ownerUserId);
+  const updated: FamilyTree = {
+    ...tree,
+    members: tree.members.filter((m) => m.id !== memberId),
+    edges: tree.edges.filter((e) => e.fromId !== memberId && e.toId !== memberId),
+    updatedAt: new Date().toISOString(),
+  };
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  return updated;
+}

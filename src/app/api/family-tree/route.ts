@@ -3,6 +3,8 @@ import {
   addFamilyMember,
   getFamilyTree,
   linkFamilyRelation,
+  updateFamilyMember,
+  deleteFamilyMember,
 } from "@/app/actions";
 
 export async function GET(req: Request) {
@@ -39,6 +41,42 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json(
       { error: "Failed to update tree" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json();
+    if (body.type === "member") {
+      const { ownerUserId, member } = body;
+      if (!ownerUserId || !member)
+        return NextResponse.json({ error: "Missing params" }, { status: 400 });
+      const updated = await updateFamilyMember(ownerUserId, member);
+      return NextResponse.json({ tree: updated });
+    }
+    return NextResponse.json({ error: "Unknown type" }, { status: 400 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Failed to update member" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const ownerUserId = searchParams.get("ownerUserId");
+    const memberId = searchParams.get("memberId");
+    if (!ownerUserId || !memberId)
+      return NextResponse.json({ error: "Missing params" }, { status: 400 });
+    const updated = await deleteFamilyMember(ownerUserId, memberId);
+    return NextResponse.json({ tree: updated });
+  } catch (e) {
+    return NextResponse.json(
+      { error: "Failed to delete member" },
       { status: 500 }
     );
   }
