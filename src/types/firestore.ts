@@ -63,6 +63,7 @@ export interface FamilyTreeMember {
   isDeceased?: boolean;
   visibility?: "public" | "relatives" | "private";
   externalIds?: Record<string, string>; // e.g., ancestry/myheritage ids
+  relationshipToUser?: string; // Direct relationship to current user
   // Residence information
   residenceProvince?: string;
   residenceDistrict?: string;

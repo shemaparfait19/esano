@@ -140,30 +140,52 @@ export default function FamilyTreePage() {
     const siblings: FamilyTreeMember[] = [];
     const otherRelatives: { [key: string]: FamilyTreeMember[] } = {};
 
-    // Since we're now syncing from relatives data, we can access the relationshipToUser
-    // For now, we'll use the edge relations which are mapped from relationshipToUser
-    edges.forEach(edge => {
-      const member = members.find(m => m.id === edge.toId);
-      if (!member) return;
+    members.forEach(member => {
+      // Use relationshipToUser field if available, otherwise fall back to edge relations
+      if (member.relationshipToUser) {
+        const relationship = member.relationshipToUser.toLowerCase();
 
-      // Check relationship type - use the actual relation values from the type
-      if (edge.relation === 'parent') {
-        if (!parents.find(p => p.id === member.id)) {
-          parents.push(member);
-        }
-      } else if (edge.relation === 'sibling') {
-        if (!siblings.find(s => s.id === member.id)) {
-          siblings.push(member);
+        if (relationship.includes('father') || relationship.includes('mother') || relationship.includes('parent')) {
+          if (!parents.find(p => p.id === member.id)) {
+            parents.push(member);
+          }
+        } else if (relationship.includes('brother') || relationship.includes('sister') || relationship.includes('sibling')) {
+          if (!siblings.find(s => s.id === member.id)) {
+            siblings.push(member);
+          }
+        } else {
+          // Other relationships
+          const relationKey = relationship;
+          if (!otherRelatives[relationKey]) {
+            otherRelatives[relationKey] = [];
+          }
+          if (!otherRelatives[relationKey].find(r => r.id === member.id)) {
+            otherRelatives[relationKey].push(member);
+          }
         }
       } else {
-        // Other relationships (spouse, grandparent, grandchild, cousin)
-        const relationKey = edge.relation;
-        if (!otherRelatives[relationKey]) {
-          otherRelatives[relationKey] = [];
-        }
-        if (!otherRelatives[relationKey].find(r => r.id === member.id)) {
-          otherRelatives[relationKey].push(member);
-        }
+        // Fall back to edge relations
+        const memberEdges = edges.filter(e => e.toId === member.id);
+        memberEdges.forEach(edge => {
+          if (edge.relation === 'parent') {
+            if (!parents.find(p => p.id === member.id)) {
+              parents.push(member);
+            }
+          } else if (edge.relation === 'sibling') {
+            if (!siblings.find(s => s.id === member.id)) {
+              siblings.push(member);
+            }
+          } else {
+            // Other relationships
+            const relationKey = edge.relation;
+            if (!otherRelatives[relationKey]) {
+              otherRelatives[relationKey] = [];
+            }
+            if (!otherRelatives[relationKey].find(r => r.id === member.id)) {
+              otherRelatives[relationKey].push(member);
+            }
+          }
+        });
       }
     });
 
@@ -571,98 +593,125 @@ export default function FamilyTreePage() {
           <DialogHeader>
             <DialogTitle>Edit Family Member</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={editForm.fullName || ''}
-                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="gender">Gender</Label>
-                <Select
-                  value={editForm.gender || ''}
-                  onValueChange={(value) => setEditForm({ ...editForm, gender: value as "male" | "female" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="grid gap-4">
+            <div>
+              <Label>Full Name</Label>
+              <Input
+                value={editForm.fullName || ''}
+                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                placeholder="Enter the full name"
+              />
+            </div>
+            <div>
+              <Label>Gender</Label>
+              <Select
+                value={editForm.gender || ''}
+                onValueChange={(value) => setEditForm({ ...editForm, gender: value as "male" | "female" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Relationship Type</Label>
+              <Select
+                value={editForm.relationshipToUser || ''}
+                onValueChange={(value) => setEditForm({ ...editForm, relationshipToUser: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relationship to you" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mother">Mother</SelectItem>
+                  <SelectItem value="father">Father</SelectItem>
+                  <SelectItem value="brother">Brother</SelectItem>
+                  <SelectItem value="sister">Sister</SelectItem>
+                  <SelectItem value="grandmother">Grandmother</SelectItem>
+                  <SelectItem value="grandfather">Grandfather</SelectItem>
+                  <SelectItem value="uncle">Uncle</SelectItem>
+                  <SelectItem value="aunt">Aunt</SelectItem>
+                  <SelectItem value="cousin">Cousin</SelectItem>
+                  <SelectItem value="nephew">Nephew</SelectItem>
+                  <SelectItem value="niece">Niece</SelectItem>
+                  <SelectItem value="step-mother">Step Mother</SelectItem>
+                  <SelectItem value="step-father">Step Father</SelectItem>
+                  <SelectItem value="step-brother">Step Brother</SelectItem>
+                  <SelectItem value="step-sister">Step Sister</SelectItem>
+                  <SelectItem value="guardian">Guardian</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="birthDate">Birth Date</Label>
+                <Label>Birth Place (Optional)</Label>
                 <Input
-                  id="birthDate"
+                  value={editForm.birthPlace || ''}
+                  onChange={(e) => setEditForm({ ...editForm, birthPlace: e.target.value })}
+                  placeholder="City, Country"
+                />
+              </div>
+              <div>
+                <Label>Birth Date (Optional)</Label>
+                <Input
                   type="date"
                   value={editForm.birthDate || ''}
                   onChange={(e) => setEditForm({ ...editForm, birthDate: e.target.value })}
                 />
               </div>
-              <div>
-                <Label htmlFor="birthPlace">Birth Place</Label>
-                <Input
-                  id="birthPlace"
-                  value={editForm.birthPlace || ''}
-                  onChange={(e) => setEditForm({ ...editForm, birthPlace: e.target.value })}
-                />
-              </div>
             </div>
             <div>
-              <Label htmlFor="occupation">Occupation</Label>
+              <Label>Occupation (Optional)</Label>
               <Input
-                id="occupation"
                 value={editForm.occupation || ''}
                 onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+                placeholder="Enter occupation"
               />
             </div>
             <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
+              <Label>Notes (Optional)</Label>
+              <Input
                 value={editForm.notes || ''}
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                placeholder="Additional information"
               />
             </div>
-          </div>
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setOpenEdit(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!editingMember || !editForm.fullName) return;
-                try {
-                  const response = await fetch('/api/family-tree', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      type: 'member',
-                      ownerUserId: user?.uid,
-                      member: { ...editingMember, ...editForm },
-                    }),
-                  });
-                  if (response.ok) {
-                    toast({ title: "Member updated successfully" });
-                    setOpenEdit(false);
-                  } else {
-                    toast({ title: "Failed to update member", variant: "destructive" });
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpenEdit(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!editingMember || !editForm.fullName) return;
+                  try {
+                    const response = await fetch('/api/family-tree', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: 'member',
+                        ownerUserId: user?.uid,
+                        member: { ...editingMember, ...editForm },
+                      }),
+                    });
+                    if (response.ok) {
+                      toast({ title: "Member updated successfully" });
+                      setOpenEdit(false);
+                    } else {
+                      toast({ title: "Failed to update member", variant: "destructive" });
+                    }
+                  } catch (error) {
+                    toast({ title: "Error updating member", variant: "destructive" });
                   }
-                } catch (error) {
-                  toast({ title: "Error updating member", variant: "destructive" });
-                }
-              }}
-            >
-              Save
-            </Button>
+                }}
+              >
+                Save Changes
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
