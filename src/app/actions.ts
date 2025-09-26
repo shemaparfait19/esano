@@ -25,6 +25,19 @@ import type {
   FamilyTreeEdge,
 } from "@/types/firestore";
 
+function sanitize<T>(value: T): T {
+  if (Array.isArray(value)) return value.map((v) => sanitize(v)) as any;
+  if (value && typeof value === "object") {
+    const out: any = {};
+    Object.entries(value as any).forEach(([k, v]) => {
+      if (v === undefined) return;
+      out[k] = sanitize(v as any);
+    });
+    return out;
+  }
+  return value;
+}
+
 async function withRetry<T>(
   fn: () => Promise<T>,
   attempts = 2,
@@ -366,7 +379,7 @@ export async function addFamilyMember(
     members: [...tree.members.filter((m) => m.id !== member.id), member],
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), sanitize(updated), { merge: true });
   return updated;
 }
 
@@ -388,7 +401,7 @@ export async function linkFamilyRelation(
     edges: [...withoutDup, edge],
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), sanitize(updated), { merge: true });
   return updated;
 }
 
@@ -402,7 +415,7 @@ export async function updateFamilyMember(
     members: tree.members.map((m) => (m.id === member.id ? member : m)),
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), sanitize(updated), { merge: true });
   return updated;
 }
 
@@ -417,6 +430,6 @@ export async function deleteFamilyMember(
     edges: tree.edges.filter((e) => e.fromId !== memberId && e.toId !== memberId),
     updatedAt: new Date().toISOString(),
   };
-  await setDoc(fsDoc(db, "familyTrees", ownerUserId), updated, { merge: true });
+  await setDoc(fsDoc(db, "familyTrees", ownerUserId), sanitize(updated), { merge: true });
   return updated;
 }
