@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail } from "lucide-react";
+import { User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail, Plus } from "lucide-react";
 import Link from "next/link";
 
 function sanitize<T>(value: T): T {
@@ -324,6 +324,14 @@ export default function FamilyTreePage() {
                       />
                     ));
                   })()}
+                </div>
+                <div className="mt-4 flex justify-center">
+                  <Link href="/dashboard/relatives">
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Relatives
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

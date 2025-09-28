@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { Users, UserPlus, Crown, Heart, Baby } from 'lucide-react';
+import { Users, UserPlus, Crown, Heart, Baby, Plus } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import Link from 'next/link';
 
@@ -236,7 +236,7 @@ export default function RelativesPage() {
     const updatedHeads = [...familyHeads, newHead];
     console.log('Updated heads:', updatedHeads);
     setFamilyHeads(updatedHeads);
-    await saveFamilyData(updatedHeads, familyMembers);
+    // Save will be done via save button
 
     // Reset form
     setHeadName('');
@@ -277,7 +277,7 @@ export default function RelativesPage() {
     const updatedMembers = [...familyMembers, newMember];
     console.log('Updated members:', updatedMembers);
     setFamilyMembers(updatedMembers);
-    await saveFamilyData(familyHeads, updatedMembers);
+    // Save will be done via save button
 
     // Reset form
     setMemberName('');
@@ -565,6 +565,17 @@ export default function RelativesPage() {
                             </div>
                           </div>
                         )}
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setConnectedToHead(head.id);
+                            setOpenAddMember(true);
+                          }}
+                          className="w-full"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Relative
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
