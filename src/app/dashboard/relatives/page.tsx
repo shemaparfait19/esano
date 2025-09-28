@@ -189,20 +189,25 @@ export default function RelativesPage() {
       console.log('Family heads:', heads);
       console.log('Family members:', members);
 
-      const dataToSave = {
-        familyHeads: heads,
-        familyMembers: members,
-        updatedAt: new Date().toISOString(),
-      };
+      const response = await fetch('/api/save-family-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          familyHeads: heads,
+          familyMembers: members,
+          userId: user.uid,
+        }),
+      });
 
-      console.log('Data to save:', dataToSave);
+      if (!response.ok) {
+        throw new Error('Failed to save');
+      }
 
-      await setDoc(doc(db, 'familyData', user.uid), dataToSave);
       console.log('Family data saved successfully');
-
-      // Sync to family tree
-      await syncToFamilyTree(heads, members);
-      console.log('Family tree sync completed');
+      toast({
+        title: 'Family information saved',
+        description: 'Your family data has been saved successfully.',
+      });
     } catch (error) {
       console.error('Error saving family data:', error);
       toast({
