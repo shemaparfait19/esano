@@ -29,18 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail, Edit, Trash2 } from "lucide-react";
+import { User, Users, Heart, Baby, Crown, Sparkles, MapPin, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 
 function sanitize<T>(value: T): T {
@@ -100,17 +90,15 @@ export default function FamilyTreePage() {
     const ref = doc(db, "familyTrees", user.uid);
     let unsub: any;
     (async () => {
-      const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        const init: FamilyTree = {
-          ownerUserId: user.uid,
-          members: [],
-          edges: [],
-          updatedAt: new Date().toISOString(),
-        };
-        await setDoc(ref, sanitize(init), { merge: true });
-        setTree(init);
-      }
+      // Reset to 0 records
+      const init: FamilyTree = {
+        ownerUserId: user.uid,
+        members: [],
+        edges: [],
+        updatedAt: new Date().toISOString(),
+      };
+      await setDoc(ref, sanitize(init), { merge: true });
+      setTree(init);
       unsub = onSnapshot(ref, (s) => {
         if (s.exists()) {
           const data = s.data() as FamilyTree;
@@ -202,20 +190,7 @@ export default function FamilyTreePage() {
   const [viewingProfile, setViewingProfile] = useState<FamilyTreeMember | null>(null);
   const [openProfile, setOpenProfile] = useState(false);
 
-  // Edit Modal
-  const [editingMember, setEditingMember] = useState<FamilyTreeMember | null>(null);
-  const [openEdit, setOpenEdit] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<FamilyTreeMember>>({});
 
-  // Delete Confirmation
-  const [deletingMember, setDeletingMember] = useState<FamilyTreeMember | null>(null);
-  const [openDelete, setOpenDelete] = useState(false);
-
-  useEffect(() => {
-    if (editingMember) {
-      setEditForm({ ...editingMember });
-    }
-  }, [editingMember]);
 
   const openProfileView = (member: FamilyTreeMember) => {
     setViewingProfile(member);
@@ -245,51 +220,9 @@ export default function FamilyTreePage() {
           <div className="text-xs text-muted-foreground mt-1">{member.birthPlace}</div>
         )}
       </div>
-      <div className="flex space-x-1 mt-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-6 w-6 p-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditingMember(member);
-            setOpenEdit(true);
-          }}
-        >
-          <Edit className="h-3 w-3" />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeletingMember(member);
-            setOpenDelete(true);
-          }}
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
     </div>
   );
 
-  // Helper functions for persisting data
-  async function persistTree(next: FamilyTree) {
-    if (!user) return;
-    try {
-      const updatedAt = new Date().toISOString();
-      const payload = sanitize({ ...next, updatedAt });
-      await setDoc(doc(db, "familyTrees", user.uid), payload, { merge: true });
-      toast({ title: "Family tree updated" });
-    } catch (e: any) {
-      toast({
-        title: "Save failed",
-        description: e?.message ?? "Try again",
-        variant: "destructive",
-      });
-    }
-  }
 
 
   if (loading) {
@@ -326,9 +259,6 @@ export default function FamilyTreePage() {
             View your nuclear family. Click on any family member to see their detailed profile.
           </p>
         </div>
-        <Link href="/dashboard/relatives">
-          <Button>Add Relative</Button>
-        </Link>
       </div>
 
       {!familyHierarchy || (familyHierarchy.parents.length === 0 && familyHierarchy.siblings.length === 0 && Object.keys(familyHierarchy.otherRelatives).length === 0) ? (
@@ -587,226 +517,7 @@ export default function FamilyTreePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Member Modal */}
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Family Member</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div>
-              <Label>Full Name</Label>
-              <Input
-                value={editForm.fullName || ''}
-                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                placeholder="Enter the full name"
-              />
-            </div>
-            <div>
-              <Label>Gender</Label>
-              <Select
-                value={editForm.gender || ''}
-                onValueChange={(value) => setEditForm({ ...editForm, gender: value as "male" | "female" })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Connect To Family Head</Label>
-              <Select
-                value={editForm.connectedTo || ''}
-                onValueChange={(value) => setEditForm({ ...editForm, connectedTo: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select family head" />
-                </SelectTrigger>
-                <SelectContent>
-                  {members
-                    .filter(m => m.id !== editingMember?.id) // Exclude current member
-                    .map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.fullName} {member.relationshipToUser ? `(${member.relationshipToUser})` : ''}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Relationship to You</Label>
-              <Select
-                value={editForm.relationshipToUser || ''}
-                onValueChange={(value) => setEditForm({ ...editForm, relationshipToUser: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select relationship to you" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mother">Mother</SelectItem>
-                  <SelectItem value="father">Father</SelectItem>
-                  <SelectItem value="brother">Brother</SelectItem>
-                  <SelectItem value="sister">Sister</SelectItem>
-                  <SelectItem value="grandmother">Grandmother</SelectItem>
-                  <SelectItem value="grandfather">Grandfather</SelectItem>
-                  <SelectItem value="uncle">Uncle</SelectItem>
-                  <SelectItem value="aunt">Aunt</SelectItem>
-                  <SelectItem value="cousin">Cousin</SelectItem>
-                  <SelectItem value="nephew">Nephew</SelectItem>
-                  <SelectItem value="niece">Niece</SelectItem>
-                  <SelectItem value="step-mother">Step Mother</SelectItem>
-                  <SelectItem value="step-father">Step Father</SelectItem>
-                  <SelectItem value="step-brother">Step Brother</SelectItem>
-                  <SelectItem value="step-sister">Step Sister</SelectItem>
-                  <SelectItem value="guardian">Guardian</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Relationship to Family Head</Label>
-              <Select
-                value={editForm.relationshipToHead || ''}
-                onValueChange={(value) => setEditForm({ ...editForm, relationshipToHead: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select relationship to family head" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="wife">Wife</SelectItem>
-                  <SelectItem value="husband">Husband</SelectItem>
-                  <SelectItem value="son">Son</SelectItem>
-                  <SelectItem value="daughter">Daughter</SelectItem>
-                  <SelectItem value="brother">Brother</SelectItem>
-                  <SelectItem value="sister">Sister</SelectItem>
-                  <SelectItem value="mother">Mother</SelectItem>
-                  <SelectItem value="father">Father</SelectItem>
-                  <SelectItem value="grandmother">Grandmother</SelectItem>
-                  <SelectItem value="grandfather">Grandfather</SelectItem>
-                  <SelectItem value="uncle">Uncle</SelectItem>
-                  <SelectItem value="aunt">Aunt</SelectItem>
-                  <SelectItem value="nephew">Nephew</SelectItem>
-                  <SelectItem value="niece">Niece</SelectItem>
-                  <SelectItem value="cousin">Cousin</SelectItem>
-                  <SelectItem value="step-mother">Step Mother</SelectItem>
-                  <SelectItem value="step-father">Step Father</SelectItem>
-                  <SelectItem value="step-son">Step Son</SelectItem>
-                  <SelectItem value="step-daughter">Step Daughter</SelectItem>
-                  <SelectItem value="step-brother">Step Brother</SelectItem>
-                  <SelectItem value="step-sister">Step Sister</SelectItem>
-                  <SelectItem value="guardian">Guardian</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Birth Place (Optional)</Label>
-                <Input
-                  value={editForm.birthPlace || ''}
-                  onChange={(e) => setEditForm({ ...editForm, birthPlace: e.target.value })}
-                  placeholder="City, Country"
-                />
-              </div>
-              <div>
-                <Label>Birth Date (Optional)</Label>
-                <Input
-                  type="date"
-                  value={editForm.birthDate || ''}
-                  onChange={(e) => setEditForm({ ...editForm, birthDate: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Occupation (Optional)</Label>
-              <Input
-                value={editForm.occupation || ''}
-                onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
-                placeholder="Enter occupation"
-              />
-            </div>
-            <div>
-              <Label>Notes (Optional)</Label>
-              <Input
-                value={editForm.notes || ''}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                placeholder="Additional information"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpenEdit(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={async () => {
-                  if (!editingMember || !editForm.fullName) return;
-                  try {
-                    const response = await fetch('/api/family-tree', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        type: 'member',
-                        ownerUserId: user?.uid,
-                        member: { ...editingMember, ...editForm },
-                      }),
-                    });
-                    if (response.ok) {
-                      toast({ title: "Member updated successfully" });
-                      setOpenEdit(false);
-                    } else {
-                      toast({ title: "Failed to update member", variant: "destructive" });
-                    }
-                  } catch (error) {
-                    toast({ title: "Error updating member", variant: "destructive" });
-                  }
-                }}
-              >
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={openDelete} onOpenChange={setOpenDelete}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Family Member</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {deletingMember?.fullName}? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (!deletingMember) return;
-                try {
-                  const response = await fetch(`/api/family-tree?ownerUserId=${user?.uid}&memberId=${deletingMember.id}`, {
-                    method: 'DELETE',
-                  });
-                  if (response.ok) {
-                    toast({ title: "Member deleted successfully" });
-                    setOpenDelete(false);
-                  } else {
-                    toast({ title: "Failed to delete member", variant: "destructive" });
-                  }
-                } catch (error) {
-                  toast({ title: "Error deleting member", variant: "destructive" });
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
     </div>
   );
