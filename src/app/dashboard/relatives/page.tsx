@@ -661,6 +661,15 @@ export default function RelativesPage() {
           </Card>
         </div>
       )}
+
+      {/* Save Button */}
+      {(familyHeads.length > 0 || familyMembers.length > 0) && (
+        <div className="flex justify-center mt-8">
+          <Button onClick={() => saveFamilyData(familyHeads, familyMembers)}>
+            Save Family Information
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

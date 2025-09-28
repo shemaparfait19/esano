@@ -90,15 +90,17 @@ export default function FamilyTreePage() {
     const ref = doc(db, "familyTrees", user.uid);
     let unsub: any;
     (async () => {
-      // Reset to 0 records
-      const init: FamilyTree = {
-        ownerUserId: user.uid,
-        members: [],
-        edges: [],
-        updatedAt: new Date().toISOString(),
-      };
-      await setDoc(ref, sanitize(init), { merge: true });
-      setTree(init);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        const init: FamilyTree = {
+          ownerUserId: user.uid,
+          members: [],
+          edges: [],
+          updatedAt: new Date().toISOString(),
+        };
+        await setDoc(ref, sanitize(init), { merge: true });
+        setTree(init);
+      }
       unsub = onSnapshot(ref, (s) => {
         if (s.exists()) {
           const data = s.data() as FamilyTree;
