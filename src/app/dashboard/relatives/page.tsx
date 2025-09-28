@@ -204,6 +204,8 @@ export default function RelativesPage() {
       }
 
       console.log('Family data saved successfully');
+      // Also sync the family tree immediately from the client for instant consistency
+      await syncToFamilyTree(heads, members);
       toast({
         title: 'Family information saved',
         description: 'Your family data has been saved successfully.',
