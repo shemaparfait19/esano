@@ -278,7 +278,7 @@ export default function FamilyTreePage() {
         </Card>
       ) : (
         <div className="space-y-8">
-          {/* Parents Section - Father and Mother side by side */}
+          {/* Parents Section */}
           {familyHierarchy.parents.length > 0 && (
             <Card>
               <CardHeader>

@@ -309,6 +309,17 @@ export default function RelativesPage() {
     return <Users className="h-4 w-4 text-purple-500" />;
   };
 
+  // Get spouse for a family head
+  const getSpouse = (head: FamilyHead) => {
+    let spouseRelation = '';
+    if (head.relationship === 'father') spouseRelation = 'mother';
+    else if (head.relationship === 'grandfather') spouseRelation = 'grandmother';
+    else if (head.relationship === 'great-grandfather') spouseRelation = 'great-grandmother';
+    // Add more if needed
+
+    return familyMembers.find(m => m.connectedTo === head.id && m.relationshipToUser === spouseRelation);
+  };
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -530,21 +541,35 @@ export default function RelativesPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {familyHeads.map((head) => (
-                <Card key={head.id} className="border-primary/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Crown className="h-8 w-8 text-primary" />
-                      <div>
-                        <h3 className="font-semibold text-lg">{head.name}</h3>
-                        <p className="text-sm text-muted-foreground capitalize">
-                          {head.relationship.replace('-', ' ')}
-                        </p>
+              {familyHeads.map((head) => {
+                const spouse = getSpouse(head);
+                return (
+                  <Card key={head.id} className="border-primary/20">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Crown className="h-8 w-8 text-primary" />
+                          <div>
+                            <h3 className="font-semibold text-lg">{head.name}</h3>
+                            <p className="text-sm text-muted-foreground capitalize">
+                              {head.relationship.replace('-', ' ')}
+                            </p>
+                          </div>
+                        </div>
+                        {spouse && (
+                          <div className="flex items-center gap-3">
+                            <Heart className="h-6 w-6 text-pink-500" />
+                            <div>
+                              <h4 className="font-medium">{spouse.name}</h4>
+                              <p className="text-sm text-muted-foreground">Spouse</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
