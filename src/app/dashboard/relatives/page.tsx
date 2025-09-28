@@ -75,6 +75,20 @@ export default function RelativesPage() {
     console.log('Loading family data for user:', user.uid);
     const familyDocRef = doc(db, 'familyData', user.uid);
 
+    // Eager fetch to populate immediately after refresh
+    (async () => {
+      try {
+        const snap = await getDoc(familyDocRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setFamilyHeads((data as any).familyHeads || []);
+          setFamilyMembers((data as any).familyMembers || []);
+        }
+      } catch (e) {
+        console.error('Initial family data fetch failed:', e);
+      }
+    })();
+
     const unsubscribe = onSnapshot(familyDocRef, (snapshot) => {
       try {
         console.log('Received snapshot:', snapshot.exists());
