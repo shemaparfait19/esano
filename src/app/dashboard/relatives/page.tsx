@@ -238,7 +238,8 @@ export default function RelativesPage() {
     const updatedHeads = [...familyHeads, newHead];
     console.log('Updated heads:', updatedHeads);
     setFamilyHeads(updatedHeads);
-    // Save will be done via save button
+    // Persist immediately so data remains across sessions
+    await saveFamilyData(updatedHeads, familyMembers);
 
     // Reset form
     setHeadName('');
@@ -279,7 +280,8 @@ export default function RelativesPage() {
     const updatedMembers = [...familyMembers, newMember];
     console.log('Updated members:', updatedMembers);
     setFamilyMembers(updatedMembers);
-    // Save will be done via save button
+    // Persist immediately so data remains across sessions
+    await saveFamilyData(familyHeads, updatedMembers);
 
     // Reset form
     setMemberName('');
