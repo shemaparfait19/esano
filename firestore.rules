@@ -8,12 +8,12 @@ service cloud.firestore {
 
     // Users can read and write their own family data
     match /familyData/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null;
     }
 
     // Users can read and write their own family trees
     match /familyTrees/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if request.auth != null;
     }
 
     // Allow reading DNA data for matching (you might want to restrict this more)
