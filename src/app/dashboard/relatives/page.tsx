@@ -81,17 +81,24 @@ export default function RelativesPage() {
         console.log('Force loading data for user:', user.uid);
         const snap = await getDoc(familyDocRef);
         console.log('Document exists:', snap.exists());
+
         if (snap.exists()) {
           const data = snap.data();
-          console.log('Raw document data:', data);
+          console.log('COMPLETE Raw document data:', JSON.stringify(data, null, 2));
+          console.log('Document keys:', Object.keys(data));
+          console.log('Data type of each field:');
+          Object.keys(data).forEach(key => {
+            console.log(`  ${key}:`, typeof data[key], Array.isArray(data[key]) ? 'Array' : 'Not Array');
+          });
 
-          // Check if data has the expected structure
-          const heads = data?.familyHeads || [];
-          const members = data?.familyMembers || [];
+          // The data structure is correct - familyHeads and familyMembers are arrays
+          const heads = Array.isArray(data?.familyHeads) ? data.familyHeads : [];
+          const members = Array.isArray(data?.familyMembers) ? data.familyMembers : [];
 
-          console.log('Extracted familyHeads:', heads, 'length:', heads.length);
-          console.log('Extracted familyMembers:', members, 'length:', members.length);
+          console.log('Final extracted familyHeads:', heads, 'length:', heads.length);
+          console.log('Final extracted familyMembers:', members, 'length:', members.length);
 
+          // Ensure we set the state correctly
           setFamilyHeads(heads);
           setFamilyMembers(members);
         } else {
@@ -117,8 +124,8 @@ export default function RelativesPage() {
         const data = snapshot.data();
         console.log('Real-time data:', data);
 
-        const heads = data?.familyHeads || [];
-        const members = data?.familyMembers || [];
+        const heads = Array.isArray(data?.familyHeads) ? data.familyHeads : [];
+        const members = Array.isArray(data?.familyMembers) ? data.familyMembers : [];
 
         console.log('Real-time familyHeads:', heads, 'length:', heads.length);
         console.log('Real-time familyMembers:', members, 'length:', members.length);
@@ -322,42 +329,6 @@ export default function RelativesPage() {
             Start by adding family heads (fathers), then connect relatives to them.
           </p>
 
-          {/* Debug Info */}
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h3 className="font-medium text-yellow-800">Debug Information:</h3>
-            <p className="text-sm text-yellow-700">User ID: {user?.uid || 'Not logged in'}</p>
-            <p className="text-sm text-yellow-700">Family Heads: {totalFamilyHeads}</p>
-            <p className="text-sm text-yellow-700">Family Members: {totalFamilyMembers}</p>
-            <p className="text-sm text-yellow-700">Total Relatives: {totalRelatives}</p>
-            <details className="mt-2">
-              <summary className="cursor-pointer text-sm text-yellow-700">View Raw Data</summary>
-              <pre className="mt-2 text-xs bg-yellow-100 p-2 rounded overflow-auto max-h-40">
-                Family Heads: {JSON.stringify(familyHeads, null, 2)}
-                Family Members: {JSON.stringify(familyMembers, null, 2)}
-              </pre>
-            </details>
-            <Button
-              onClick={async () => {
-                if (!user) return;
-                console.log('Manual check for user:', user.uid);
-                const familyDocRef = doc(db, 'familyData', user.uid);
-                try {
-                  const snap = await getDoc(familyDocRef);
-                  console.log('Manual fetch result:', snap.exists());
-                  if (snap.exists()) {
-                    console.log('Manual fetch data:', snap.data());
-                  }
-                } catch (error) {
-                  console.error('Manual fetch error:', error);
-                }
-              }}
-              size="sm"
-              variant="outline"
-              className="mt-2"
-            >
-              Check Firestore Data
-            </Button>
-          </div>
         </div>
         <div className="flex gap-2">
           <Dialog open={openAddHead} onOpenChange={setOpenAddHead}>
