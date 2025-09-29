@@ -75,31 +75,27 @@ export default function RelativesPage() {
     console.log('Loading family data for user:', user.uid);
     const familyDocRef = doc(db, 'familyData', user.uid);
 
-    // Eager fetch to populate immediately after refresh
-    (async () => {
+    // Force immediate load of existing data
+    const loadData = async () => {
       try {
+        console.log('Force loading data for user:', user.uid);
         const snap = await getDoc(familyDocRef);
+        console.log('Document exists:', snap.exists());
         if (snap.exists()) {
           const data = snap.data();
-          setFamilyHeads((data as any).familyHeads || []);
-          setFamilyMembers((data as any).familyMembers || []);
-        }
-      } catch (e) {
-        console.error('Initial family data fetch failed:', e);
-      }
-    })();
+          console.log('Raw document data:', data);
 
-    const unsubscribe = onSnapshot(familyDocRef, (snapshot) => {
-      try {
-        console.log('Received snapshot:', snapshot.exists());
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          console.log('Family data loaded:', data);
-          setFamilyHeads(data.familyHeads || []);
-          setFamilyMembers(data.familyMembers || []);
+          // Check if data has the expected structure
+          const heads = data?.familyHeads || [];
+          const members = data?.familyMembers || [];
+
+          console.log('Extracted familyHeads:', heads, 'length:', heads.length);
+          console.log('Extracted familyMembers:', members, 'length:', members.length);
+
+          setFamilyHeads(heads);
+          setFamilyMembers(members);
         } else {
-          console.log('No family data document exists yet');
-          // Document doesn't exist yet, initialize empty arrays
+          console.log('No document found, initializing empty arrays');
           setFamilyHeads([]);
           setFamilyMembers([]);
         }
@@ -110,86 +106,37 @@ export default function RelativesPage() {
       } finally {
         setLoading(false);
       }
+    };
+
+    loadData();
+
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(familyDocRef, (snapshot) => {
+      console.log('Real-time snapshot received, exists:', snapshot.exists());
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        console.log('Real-time data:', data);
+
+        const heads = data?.familyHeads || [];
+        const members = data?.familyMembers || [];
+
+        console.log('Real-time familyHeads:', heads, 'length:', heads.length);
+        console.log('Real-time familyMembers:', members, 'length:', members.length);
+
+        setFamilyHeads(heads);
+        setFamilyMembers(members);
+      } else {
+        console.log('Real-time: no document exists');
+        setFamilyHeads([]);
+        setFamilyMembers([]);
+      }
     }, (error) => {
-      console.error('Error in family data snapshot:', error);
-      setFamilyHeads([]);
-      setFamilyMembers([]);
-      setLoading(false);
+      console.error('Real-time listener error:', error);
     });
 
     return () => unsubscribe();
   }, [user]);
 
-  // Convert family data to family tree format and sync
-  const syncToFamilyTree = async (heads: FamilyHead[], members: FamilyMember[]) => {
-    if (!user) return;
-
-    try {
-      // Convert family heads and members to family tree format
-      const treeMembers: any[] = [];
-      const treeEdges: any[] = [];
-
-      // Add family heads as tree members
-      heads.forEach(head => {
-        treeMembers.push({
-          id: head.id,
-          fullName: head.name,
-          birthPlace: undefined,
-          photoUrl: undefined,
-        });
-      });
-
-      // Add family members and create edges
-      members.forEach(member => {
-        treeMembers.push({
-          id: member.id,
-          fullName: member.name,
-          birthPlace: member.birthPlace,
-          photoUrl: undefined,
-        });
-
-        // Create edge based on relationship to user
-        const head = heads.find(h => h.id === member.connectedTo);
-        if (head) {
-          // Map relationship to user to appropriate edge type
-          let edgeRelation: string = 'cousin'; // default
-
-          const relationship = member.relationshipToUser.toLowerCase();
-
-          if (relationship.includes('father') || relationship.includes('mother') || relationship.includes('parent')) {
-            edgeRelation = 'parent';
-          } else if (relationship.includes('brother') || relationship.includes('sister') || relationship.includes('sibling')) {
-            edgeRelation = 'sibling';
-          } else if (relationship.includes('grandfather') || relationship.includes('grandmother') || relationship.includes('grandparent')) {
-            edgeRelation = 'grandparent';
-          } else if (relationship.includes('uncle') || relationship.includes('aunt')) {
-            edgeRelation = 'cousin'; // Simplified for now
-          } else if (relationship.includes('cousin')) {
-            edgeRelation = 'cousin';
-          }
-
-          treeEdges.push({
-            fromId: head.id,
-            toId: member.id,
-            relation: edgeRelation,
-          });
-        }
-      });
-
-      // Save to family tree collection
-      await setDoc(doc(db, 'familyTrees', user.uid), {
-        ownerUserId: user.uid,
-        members: treeMembers,
-        edges: treeEdges,
-        updatedAt: new Date().toISOString(),
-      });
-
-      console.log('Family tree synced with relatives data');
-    } catch (error) {
-      console.error('Error syncing to family tree:', error);
-      // Don't show error toast here as it's a background sync
-    }
-  };
 
   // Save family data to Firestore
   const saveFamilyData = async (heads: FamilyHead[], members: FamilyMember[]) => {
@@ -218,8 +165,6 @@ export default function RelativesPage() {
       }
 
       console.log('Family data saved successfully');
-      // Also sync the family tree immediately from the client for instant consistency
-      await syncToFamilyTree(heads, members);
       toast({
         title: 'Family information saved',
         description: 'Your family data has been saved successfully.',
@@ -353,6 +298,18 @@ export default function RelativesPage() {
     );
   }
 
+  // Calculate family data statistics
+  const totalFamilyHeads = familyHeads.length;
+  const totalFamilyMembers = familyMembers.length;
+  const totalRelatives = totalFamilyHeads + totalFamilyMembers;
+
+  // Debug information
+  console.log('Current user ID:', user?.uid);
+  console.log('Family heads count:', totalFamilyHeads);
+  console.log('Family members count:', totalFamilyMembers);
+  console.log('Family heads data:', familyHeads);
+  console.log('Family members data:', familyMembers);
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -364,6 +321,43 @@ export default function RelativesPage() {
             Build your comprehensive family tree from 3rd generation ancestry to your immediate family.
             Start by adding family heads (fathers), then connect relatives to them.
           </p>
+
+          {/* Debug Info */}
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="font-medium text-yellow-800">Debug Information:</h3>
+            <p className="text-sm text-yellow-700">User ID: {user?.uid || 'Not logged in'}</p>
+            <p className="text-sm text-yellow-700">Family Heads: {totalFamilyHeads}</p>
+            <p className="text-sm text-yellow-700">Family Members: {totalFamilyMembers}</p>
+            <p className="text-sm text-yellow-700">Total Relatives: {totalRelatives}</p>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-sm text-yellow-700">View Raw Data</summary>
+              <pre className="mt-2 text-xs bg-yellow-100 p-2 rounded overflow-auto max-h-40">
+                Family Heads: {JSON.stringify(familyHeads, null, 2)}
+                Family Members: {JSON.stringify(familyMembers, null, 2)}
+              </pre>
+            </details>
+            <Button
+              onClick={async () => {
+                if (!user) return;
+                console.log('Manual check for user:', user.uid);
+                const familyDocRef = doc(db, 'familyData', user.uid);
+                try {
+                  const snap = await getDoc(familyDocRef);
+                  console.log('Manual fetch result:', snap.exists());
+                  if (snap.exists()) {
+                    console.log('Manual fetch data:', snap.data());
+                  }
+                } catch (error) {
+                  console.error('Manual fetch error:', error);
+                }
+              }}
+              size="sm"
+              variant="outline"
+              className="mt-2"
+            >
+              Check Firestore Data
+            </Button>
+          </div>
         </div>
         <div className="flex gap-2">
           <Dialog open={openAddHead} onOpenChange={setOpenAddHead}>
@@ -544,6 +538,91 @@ export default function RelativesPage() {
           )}
         </div>
       </div>
+
+      {/* Family Data Summary */}
+      {(familyHeads.length > 0 || familyMembers.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-xl text-primary flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Your Family Data Progress
+            </CardTitle>
+            <CardDescription>
+              Complete overview of all family information stored in your collection
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">{totalFamilyHeads}</div>
+                <div className="text-sm text-muted-foreground">Family Heads</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {familyHeads.map(head => head.name).join(', ')}
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">{totalFamilyMembers}</div>
+                <div className="text-sm text-muted-foreground">Family Members</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Connected relatives and extended family
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">{totalRelatives}</div>
+                <div className="text-sm text-muted-foreground">Total Relatives</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Complete family network
+                </div>
+              </div>
+            </div>
+
+            {/* Detailed Family Data Display */}
+            <div className="mt-6 space-y-4">
+              <h4 className="font-medium text-primary">Stored Family Information:</h4>
+
+              {familyHeads.length > 0 && (
+                <div>
+                  <h5 className="font-medium text-sm mb-2">Family Heads:</h5>
+                  <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                    {familyHeads.map((head) => (
+                      <div key={head.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                        <Crown className="h-4 w-4 text-primary" />
+                        <span className="text-sm">{head.name} ({head.relationship})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {familyMembers.length > 0 && (
+                <div>
+                  <h5 className="font-medium text-sm mb-2">Family Members:</h5>
+                  <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                    {familyMembers.map((member) => (
+                      <div key={member.id} className="p-2 bg-muted/50 rounded">
+                        <div className="flex items-center gap-2 mb-1">
+                          {getRelationshipIcon(member.relationship)}
+                          <span className="text-sm font-medium">{member.name}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {member.relationshipToUser}
+                          {member.birthPlace && ` • Born in ${member.birthPlace}`}
+                          {member.birthDate && ` • ${new Date(member.birthDate).toLocaleDateString()}`}
+                        </div>
+                        {member.notes && (
+                          <div className="text-xs text-muted-foreground mt-1 italic">
+                            {member.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Family Heads Section */}
       {familyHeads.length > 0 && (

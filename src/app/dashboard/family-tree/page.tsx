@@ -85,9 +85,75 @@ export default function FamilyTreePage() {
   const [loading, setLoading] = useState(true);
 
 
+  // Convert familyData to familyTree format
+  const convertFamilyDataToTree = (familyData: any): FamilyTree => {
+    const treeMembers: FamilyTreeMember[] = [];
+    const treeEdges: FamilyTreeEdge[] = [];
+
+    // Add family heads as tree members
+    (familyData.familyHeads || []).forEach((head: any) => {
+      treeMembers.push({
+        id: head.id,
+        fullName: head.name,
+        birthPlace: undefined,
+        photoUrl: undefined,
+        relationshipToUser: head.relationship,
+      });
+    });
+
+    // Add family members and create edges
+    (familyData.familyMembers || []).forEach((member: any) => {
+      treeMembers.push({
+        id: member.id,
+        fullName: member.name,
+        birthPlace: member.birthPlace,
+        birthDate: member.birthDate,
+        notes: member.notes,
+        photoUrl: undefined,
+        relationshipToUser: member.relationshipToUser,
+        connectedTo: member.connectedTo,
+        relationshipToHead: member.relationship,
+      });
+
+      // Create edge based on relationship to user
+      const head = (familyData.familyHeads || []).find((h: any) => h.id === member.connectedTo);
+      if (head) {
+        // Map relationship to user to appropriate edge type
+        let edgeRelation: FamilyRelation = 'cousin'; // default
+
+        const relationship = member.relationshipToUser.toLowerCase();
+
+        if (relationship.includes('father') || relationship.includes('mother') || relationship.includes('parent')) {
+          edgeRelation = 'parent';
+        } else if (relationship.includes('brother') || relationship.includes('sister') || relationship.includes('sibling')) {
+          edgeRelation = 'sibling';
+        } else if (relationship.includes('grandfather') || relationship.includes('grandmother') || relationship.includes('grandparent')) {
+          edgeRelation = 'grandparent';
+        } else if (relationship.includes('uncle') || relationship.includes('aunt')) {
+          edgeRelation = 'cousin'; // Simplified for now
+        } else if (relationship.includes('cousin')) {
+          edgeRelation = 'cousin';
+        }
+
+        treeEdges.push({
+          fromId: head.id,
+          toId: member.id,
+          relation: edgeRelation,
+        });
+      }
+    });
+
+    return {
+      ownerUserId: user?.uid || '',
+      members: treeMembers,
+      edges: treeEdges,
+      updatedAt: familyData.updatedAt || new Date().toISOString(),
+    };
+  };
+
   useEffect(() => {
     if (!user) return;
-    const ref = doc(db, "familyTrees", user.uid);
+    const ref = doc(db, "familyData", user.uid);
     let unsub: any;
     (async () => {
       const snap = await getDoc(ref);
@@ -98,13 +164,21 @@ export default function FamilyTreePage() {
           edges: [],
           updatedAt: new Date().toISOString(),
         };
-        await setDoc(ref, sanitize(init), { merge: true });
         setTree(init);
       }
       unsub = onSnapshot(ref, (s) => {
         if (s.exists()) {
-          const data = s.data() as FamilyTree;
-          setTree(data);
+          const data = s.data();
+          const treeData = convertFamilyDataToTree(data);
+          setTree(treeData);
+        } else {
+          const empty: FamilyTree = {
+            ownerUserId: user.uid,
+            members: [],
+            edges: [],
+            updatedAt: new Date().toISOString(),
+          };
+          setTree(empty);
         }
       });
       setLoading(false);

@@ -25,10 +25,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing query" }, { status: 400 });
     }
     if (!process.env.GEMINI_API_KEY) {
-      // Fallback response when AI is not available
-      return NextResponse.json({ 
-        response: "I'm currently unavailable, but I can help you with family tree setup. Please add your family members manually using the 'Add Family Head' and 'Add Relative' buttons on the Relatives page." 
-      });
+      return NextResponse.json(
+        { error: "GEMINI_API_KEY not set on server" },
+        { status: 500 }
+      );
     }
 
     // Determine whose data to load
